@@ -22,6 +22,7 @@ class ModelZooURL(object):
         "ShuffleNet-V2-0.5": "shufflenetv2_x0.5-f707e7126e.pth",
         "ShuffleNet-V2-1.0": "shufflenetv2_x1-5666bf0f80.pth",
         "MobileNet-V2-1.0": "mobilenet_v2-b0353104.pth",
+        "DarkNet-53": "darknet53-c8ce2510.pth",
     }
 
     @staticmethod

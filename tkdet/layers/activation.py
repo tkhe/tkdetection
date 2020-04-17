@@ -85,5 +85,7 @@ def get_activation(activation, inplace=False):
             "swish": lambda x: swish(x, inplace),
             "MemoryEfficientSwish": MemoryEfficientSwish(),
             "memory_efficient_swish": memory_efficient_swish,
+            "LeakyReLU": nn.LeakyReLU(0.1, inplace),
+            "leaky_relu": lambda x: F.leaky_relu(x, 0.1, inplace),
         }[activation]
     return activation
