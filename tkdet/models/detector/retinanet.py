@@ -126,7 +126,7 @@ class RetinaNet(Detector):
         storage.put_image(vis_name, vis_img)
 
     def forward(self, batched_inputs):
-        images, gt_instances = self.preprocess_inputs(batched_inputs)
+        images = self.preprocess_inputs(batched_inputs)
 
         features = self.backbone(images.tensor)
         features = self.neck(features)
@@ -137,6 +137,11 @@ class RetinaNet(Detector):
             anchors = self.anchor_generator(features)
 
         if self.training:
+            if "instances" in batched_inputs[0]:
+                gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
+            else:
+                gt_instances = None
+
             gt_classes, gt_anchors_reg_deltas = self.get_ground_truth(anchors, gt_instances)
             losses = self.losses(gt_classes, gt_anchors_reg_deltas, box_cls, box_delta)
 
@@ -291,12 +296,7 @@ class RetinaNet(Detector):
         images = [x["image"].to(self.device) for x in batched_inputs]
         images = [self.normalizer(x) for x in images]
         images = ImageList.from_tensors(images, self.neck.size_divisibility)
-
-        if "instances" in batched_inputs[0]:
-            gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
-        else:
-            gt_instances = None
-        return images, gt_instances
+        return images
 
 
 class RetinaNetHead(nn.Module):
