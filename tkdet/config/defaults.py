@@ -48,6 +48,155 @@ _C.MODEL.NECK.NAME = "FPN"
 
 
 # -----------------------------------------------------------------------------
+# RPN options
+# -----------------------------------------------------------------------------
+_C.MODEL.RPN = CN()
+
+_C.MODEL.RPN.NAME = "RPN"
+
+_C.MODEL.RPN.IN_FEATURES = []
+
+_C.MODEL.RPN.NMS_THRESH = 0.7
+
+_C.MODEL.RPN.BOUNDARY_THRESH = -1
+
+_C.MODEL.RPN.HEAD_NAME = "StandardRPNHead"
+
+_C.MODEL.RPN.IOU_THRESHOLDS = [0.3, 0.7]
+
+_C.MODEL.RPN.IOU_LABELS = [0, -1, 1]
+
+_C.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
+
+_C.MODEL.RPN.POSITIVE_FRACTION = 0.5
+
+_C.MODEL.RPN.BBOX_REG_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+
+_C.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000
+
+_C.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000
+
+_C.MODEL.RPN.POST_NMS_TOPK_TRAIN = 2000
+
+_C.MODEL.RPN.POST_NMS_TOPK_TEST = 1000
+
+_C.MODEL.RPN.NMS_THRESH = 0.7
+
+
+# ---------------------------------------------------------------------------- #
+# ROI HEADS options
+# ---------------------------------------------------------------------------- #
+_C.MODEL.ROI_HEADS = CN()
+
+_C.MODEL.ROI_HEADS.NAME = "Res5ROIHeads"
+
+_C.MODEL.ROI_HEADS.NUM_CLASSES = 80
+
+_C.MODEL.ROI_HEADS.IN_FEATURES = []
+
+_C.MODEL.ROI_HEADS.IOU_THRESHOLDS = [0.5]
+
+_C.MODEL.ROI_HEADS.IOU_LABELS = [0, 1]
+
+_C.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512
+
+_C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
+
+_C.MODEL.ROI_HEADS.PROPOSAL_APPEND_GT = True
+
+
+# ---------------------------------------------------------------------------- #
+# Box Head
+# ---------------------------------------------------------------------------- #
+_C.MODEL.ROI_BOX_HEAD = CN()
+
+_C.MODEL.ROI_BOX_HEAD.NAME = ""
+
+_C.MODEL.ROI_BOX_HEAD.BBOX_REG_WEIGHTS = (10.0, 10.0, 5.0, 5.0)
+
+_C.MODEL.ROI_BOX_HEAD.SMOOTH_L1_BETA = 0.0
+
+_C.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 14
+
+_C.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO = 0
+
+_C.MODEL.ROI_BOX_HEAD.POOLER_TYPE = "ROIAlignV2"
+
+_C.MODEL.ROI_BOX_HEAD.NUM_FC = 0
+
+_C.MODEL.ROI_BOX_HEAD.FC_DIM = 1024
+
+_C.MODEL.ROI_BOX_HEAD.NUM_CONV = 0
+
+_C.MODEL.ROI_BOX_HEAD.CONV_DIM = 256
+
+_C.MODEL.ROI_BOX_HEAD.NORM = ""
+
+_C.MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG = False
+
+_C.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES = False
+
+
+# ---------------------------------------------------------------------------- #
+# Cascaded Box Head
+# ---------------------------------------------------------------------------- #
+_C.MODEL.ROI_BOX_CASCADE_HEAD = CN()
+
+_C.MODEL.ROI_BOX_CASCADE_HEAD.BBOX_REG_WEIGHTS = (
+    (10.0, 10.0, 5.0, 5.0),
+    (20.0, 20.0, 10.0, 10.0),
+    (30.0, 30.0, 15.0, 15.0),
+)
+_C.MODEL.ROI_BOX_CASCADE_HEAD.IOUS = (0.5, 0.6, 0.7)
+
+
+# ---------------------------------------------------------------------------- #
+# Mask Head
+# ---------------------------------------------------------------------------- #
+_C.MODEL.ROI_MASK_HEAD = CN()
+
+_C.MODEL.ROI_MASK_HEAD.NAME = "MaskRCNNConvUpsampleHead"
+
+_C.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 14
+
+_C.MODEL.ROI_MASK_HEAD.POOLER_SAMPLING_RATIO = 0
+
+_C.MODEL.ROI_MASK_HEAD.NUM_CONV = 0
+
+_C.MODEL.ROI_MASK_HEAD.CONV_DIM = 256
+
+_C.MODEL.ROI_MASK_HEAD.NORM = ""
+
+_C.MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK = False
+
+_C.MODEL.ROI_MASK_HEAD.POOLER_TYPE = "ROIAlignV2"
+
+
+# ---------------------------------------------------------------------------- #
+# Keypoint Head
+# ---------------------------------------------------------------------------- #
+_C.MODEL.ROI_KEYPOINT_HEAD = CN()
+
+_C.MODEL.ROI_KEYPOINT_HEAD.NAME = "KRCNNConvDeconvUpsampleHead"
+
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_RESOLUTION = 14
+
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_SAMPLING_RATIO = 0
+
+_C.MODEL.ROI_KEYPOINT_HEAD.CONV_DIMS = tuple(512 for _ in range(8))
+
+_C.MODEL.ROI_KEYPOINT_HEAD.NUM_KEYPOINTS = 17
+
+_C.MODEL.ROI_KEYPOINT_HEAD.MIN_KEYPOINTS_PER_IMAGE = 1
+
+_C.MODEL.ROI_KEYPOINT_HEAD.NORMALIZE_LOSS_BY_VISIBLE_KEYPOINTS = True
+
+_C.MODEL.ROI_KEYPOINT_HEAD.LOSS_WEIGHT = 1.0
+
+_C.MODEL.ROI_KEYPOINT_HEAD.POOLER_TYPE = "ROIAlignV2"
+
+
+# -----------------------------------------------------------------------------
 # Anchor options
 # -----------------------------------------------------------------------------
 _C.MODEL.ANCHOR = CN()
