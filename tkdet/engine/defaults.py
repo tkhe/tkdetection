@@ -214,8 +214,6 @@ class DefaultTrainer(SimpleTrainer):
 
         if comm.is_main_process():
             ret.append(hooks.PeriodicWriter(self.build_writers(), period=20))
-
-        if comm.is_main_process():
             ret.append(hooks.PeriodicCheckpointer(self.checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD))
 
         def test_and_save_results():
