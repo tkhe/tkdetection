@@ -8,7 +8,7 @@ MODEL:
 MOBILENET_V2:
   NORM: "BN"
 FPN:
-  IN_FEATURE: ["6", "13", "18"]
+  IN_FEATURES: ["6", "13", "18"]
   TOP_BLOCK:
     IN_FEATURE: ("18")
 DATASETS:
