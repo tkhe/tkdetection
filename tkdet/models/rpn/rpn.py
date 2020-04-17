@@ -69,12 +69,12 @@ class RPN(nn.Module):
         super().__init__()
 
         self.min_box_side_len = cfg.MODEL.RPN.MIN_SIZE
-        self.in_feature = cfg.MODEL.RPN.IN_FEATURE
+        self.in_features = cfg.MODEL.RPN.IN_FEATURES
         self.nms_thresh = cfg.MODEL.RPN.NMS_THRESH
         self.batch_size_per_image = cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE
         self.positive_fraction = cfg.MODEL.RPN.POSITIVE_FRACTION
         self.loss_weight = cfg.MODEL.RPN.LOSS_WEIGHT
-        self.smooth_l1_beta = cfg.LOSS.SMOOTH_L1.BETA
+        self.smooth_l1_beta = cfg.LOSS.SMOOTH_L1_LOSS.BETA
 
         self.pre_nms_topk = {
             True: cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN,

@@ -16,6 +16,7 @@ __all__ = ["BOX_HEAD_REGISTRY", "build_box_head"]
 BOX_HEAD_REGISTRY = Registry("BOX_HEAD")
 
 
+@BOX_HEAD_REGISTRY.register()
 class FastRCNNConvFCHead(nn.Module):
     @configurable
     def __init__(

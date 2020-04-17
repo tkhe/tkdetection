@@ -89,7 +89,7 @@ class ROIHeads(torch.nn.Module):
         self.batch_size_per_image = cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE
         self.positive_sample_fraction = cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION
         self.in_features = cfg.MODEL.ROI_HEADS.IN_FEATURES
-        self.num_classes = cfg.MODEL.ROI_HEADS.NUM_CLASSES
+        self.num_classes = cfg.MODEL.NUM_CLASSES
         self.proposal_append_gt = cfg.MODEL.ROI_HEADS.PROPOSAL_APPEND_GT
 
         self.proposal_matcher = Matcher(

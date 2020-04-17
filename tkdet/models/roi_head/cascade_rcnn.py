@@ -12,7 +12,7 @@ from tkdet.structures import pairwise_iou
 from tkdet.utils.events import get_event_storage
 from .box_head import build_box_head
 from .fast_rcnn import FastRCNNOutputLayers, fast_rcnn_inference
-from .roi_heads import ROI_HEADS_REGISTRY, StandardROIHeads
+from .roi_head import ROI_HEADS_REGISTRY, StandardROIHeads
 
 __all__ = ["CascadeROIHeads"]
 

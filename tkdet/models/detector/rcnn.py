@@ -24,7 +24,7 @@ class GeneralizedRCNN(Detector):
 
         self.device = torch.device(cfg.MODEL.DEVICE)
         self.backbone = build_backbone(cfg)
-        self.neck = build_neck(cfg)
+        self.neck = build_neck(cfg, self.backbone.output_shape())
         if self.neck is not None:
             output_shape = self.neck.output_shape()
         else:

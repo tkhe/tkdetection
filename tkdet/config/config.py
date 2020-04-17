@@ -63,8 +63,8 @@ def _get_args_from_config(from_config_func, *args, **kwargs):
 
 
 def _called_with_cfg(*args, **kwargs):
-    if len(args) and isinstance(args[0], _CfgNode):
+    if len(args) and isinstance(args[0], CfgNode):
         return True
-    if isinstance(kwargs.pop("cfg", None), _CfgNode):
+    if isinstance(kwargs.pop("cfg", None), CfgNode):
         return True
     return False

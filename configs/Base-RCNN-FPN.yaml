@@ -8,7 +8,7 @@ MODEL:
   NECK:
     ENABLE: True
     NAME: "FPN"
-  ANCHOR_GENERATOR:
+  ANCHOR:
     SIZES: [[32], [64], [128], [256], [512]]
     ASPECT_RATIOS: [[0.5, 1.0, 2.0]]
   RPN:

@@ -9,7 +9,7 @@ from tkdet.config import configurable
 from tkdet.layers import ShapeSpec
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
-from tkdet.modeling.box_regression import Box2BoxTransform
+from tkdet.models.box_regression import Box2BoxTransform
 from tkdet.structures import Boxes
 from tkdet.structures import Instances
 from tkdet.utils.events import get_event_storage
@@ -247,10 +247,10 @@ class FastRCNNOutputLayers(nn.Module):
         if isinstance(input_shape, int):
             input_shape = ShapeSpec(channels=input_shape)
         input_size = input_shape.channels * (input_shape.width or 1) * (input_shape.height or 1)
-        self.cls_score = Linear(input_size, num_classes + 1)
+        self.cls_score = nn.Linear(input_size, num_classes + 1)
         num_bbox_reg_classes = 1 if cls_agnostic_bbox_reg else num_classes
         box_dim = len(box2box_transform.weights)
-        self.bbox_pred = Linear(input_size, num_bbox_reg_classes * box_dim)
+        self.bbox_pred = nn.Linear(input_size, num_bbox_reg_classes * box_dim)
 
         nn.init.normal_(self.cls_score.weight, std=0.01)
         nn.init.normal_(self.bbox_pred.weight, std=0.001)
@@ -289,7 +289,7 @@ class FastRCNNOutputLayers(nn.Module):
             self.box2box_transform,
             scores,
             proposal_deltas, 
-            roposals,
+            proposals,
             self.smooth_l1_beta
         ).losses()
 

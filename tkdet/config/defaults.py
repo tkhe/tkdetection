@@ -72,6 +72,8 @@ _C.MODEL.RPN.POSITIVE_FRACTION = 0.5
 
 _C.MODEL.RPN.BBOX_REG_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
 
+_C.MODEL.RPN.LOSS_WEIGHT = 1.0
+
 _C.MODEL.RPN.PRE_NMS_TOPK_TRAIN = 12000
 
 _C.MODEL.RPN.PRE_NMS_TOPK_TEST = 6000
@@ -82,15 +84,15 @@ _C.MODEL.RPN.POST_NMS_TOPK_TEST = 1000
 
 _C.MODEL.RPN.NMS_THRESH = 0.7
 
+_C.MODEL.RPN.MIN_SIZE = 0
+
 
 # ---------------------------------------------------------------------------- #
 # ROI HEADS options
 # ---------------------------------------------------------------------------- #
 _C.MODEL.ROI_HEADS = CN()
 
-_C.MODEL.ROI_HEADS.NAME = "Res5ROIHeads"
-
-_C.MODEL.ROI_HEADS.NUM_CLASSES = 80
+_C.MODEL.ROI_HEADS.NAME = "StandardROIHeads"
 
 _C.MODEL.ROI_HEADS.IN_FEATURES = []
 
