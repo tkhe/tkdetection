@@ -269,6 +269,7 @@ class StandardROIHeads(ROIHeads):
         del images
         if self.training:
             assert targets
+
             proposals = self.label_and_sample_proposals(proposals, targets)
         del targets
 

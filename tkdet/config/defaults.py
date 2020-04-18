@@ -231,6 +231,24 @@ _C.RETINANET.BBOX_REG_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
 
 
 # -----------------------------------------------------------------------------
+# FCOS options
+# -----------------------------------------------------------------------------
+_C.FCOS = CN()
+
+_C.FCOS.NORM_REG_TARGETS = False
+
+_C.FCOS.CENTERNESS_ON_REG = False
+
+_C.FCOS.NUM_CONVS = 4
+
+_C.FCOS.PRIOR_PROB = 0.01
+
+_C.FCOS.CENTER_SAMPLING_RADIUS = 0.0
+
+_C.FCOS.TOPK_CANDIDATES = 1000
+
+
+# -----------------------------------------------------------------------------
 # ResNet and ResNeXt
 # -----------------------------------------------------------------------------
 _C.RESNET = CN()
