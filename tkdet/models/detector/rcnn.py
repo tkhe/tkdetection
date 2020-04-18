@@ -130,7 +130,11 @@ class GeneralizedRCNN(Detector):
     def preprocess_image(self, batched_inputs):
         images = [x["image"].to(self.device) for x in batched_inputs]
         images = [self.normalizer(x) for x in images]
-        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+        if self.neck is not None:
+            size_divisibility = self.neck.size_divisibility
+        else:
+            size_divisibility = self.backbone.size_divisibility
+        images = ImageList.from_tensors(images, size_divisibility)
         return images
 
     @staticmethod
