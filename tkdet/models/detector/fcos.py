@@ -114,7 +114,7 @@ class FCOS(Detector):
         super().__init__()
 
         self.backbone = build_backbone(cfg)
-        self.neck = build_neck(cfg)
+        self.neck = build_neck(cfg, self.backbone.output_shape())
         output_shape = self.neck.output_shape()
         feature_shapes = [output_shape[f] for f in output_shape]
         self.neck_strides = [x.stride for x in feature_shapes]
@@ -157,6 +157,7 @@ class FCOS(Detector):
                 centerness,
                 images.image_sizes
             )
+            processed_results = []
             for results_per_image, input_per_image, image_size in zip(
                 results,
                 batched_inputs,
@@ -201,7 +202,7 @@ class FCOS(Detector):
         reg_targets_flatten = reg_targets_flatten[pos_inds]
         centerness_flatten = centerness_flatten[pos_inds]
 
-        num_foreground = pos_inds.sum().item()
+        num_foreground = pos_inds.numel()
         gt_labels = torch.zeros_like(box_cls_flatten)
         gt_labels[pos_inds, labels_flatten[pos_inds]] = 1
 
@@ -462,7 +463,7 @@ class FCOSHead(nn.Module):
         self.centerness = nn.Conv2d(in_channels, 1, 3, 1, 1)
         self.scales = nn.ModuleList([Scale(1.0) for _ in range(len(input_shape))])
 
-        for module in [self.cls_score, self.cls_subnet, self.centerness]:
+        for module in [self.cls_score, self.bbox_pred, self.centerness]:
             nn.init.normal_(module.weight, std=0.01)
             nn.init.constant_(module.bias, 0)
 
