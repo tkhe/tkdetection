@@ -1,10 +1,10 @@
 _BASE_: "../Base-RCNN-FPN.yaml"
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNN"
-  WEIGHTS: "torchvision://ResNet-50"
+  WEIGHTS: "torchvision://ResNet-18"
   NUM_CLASSES: 20
   BACKBONE:
-    NAME: "ResNet-50"
+    NAME: "ResNet-18"
     OUT_FEATURES: ["layer1", "layer2", "layer3", "layer4"]
   RPN:
     IN_FEATURES: ["p2", "p3", "p4", "p5", "p6"]
@@ -31,4 +31,4 @@ INPUT:
   TRANSFORM: "ResizeTransform"
   MAX_SIZE_TRAIN: 512
   MAX_SIZE_TEST: 512
-OUTPUT_DIR: "output/pascal_voc/faster_rcnn_resnet_50_fpn_3x"
+OUTPUT_DIR: "output/pascal_voc/faster_rcnn_resnet_18_fpn_3x"

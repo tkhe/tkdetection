@@ -1,20 +1,24 @@
 _BASE_: "../Base-RCNN-FPN.yaml"
 MODEL:
   META_ARCHITECTURE: "GeneralizedRCNN"
-  WEIGHTS: "torchvision://ResNet-50"
+  WEIGHTS: "torchvision://MobileNet-V2-1.0"
   NUM_CLASSES: 20
   BACKBONE:
-    NAME: "ResNet-50"
-    OUT_FEATURES: ["layer1", "layer2", "layer3", "layer4"]
+    NAME: "MobileNet-V2-1.0"
+    OUT_FEATURES: ["6", "13", "18"]
+  ANCHOR:
+    SIZES: [[64], [128], [256], [512]]
   RPN:
-    IN_FEATURES: ["p2", "p3", "p4", "p5", "p6"]
+    IN_FEATURES: ["p3", "p4", "p5", "p6"]
   ROI_HEADS:
     NAME: "StandardROIHeads"
-    IN_FEATURES: ["p2", "p3", "p4", "p5"]
+    IN_FEATURES: ["p3", "p4", "p5"]
   ROI_BOX_HEAD:
     NAME: "FastRCNNConvFCHead"
     NUM_FC: 2
     POOLER_RESOLUTION: 7
+FPN:
+  IN_FEATURES: ["6", "13", "18"]
 DATASETS:
   TRAIN: ("voc_2007_trainval", "voc_2012_trainval")
   TEST: ("voc_2007_test",)
@@ -31,4 +35,4 @@ INPUT:
   TRANSFORM: "ResizeTransform"
   MAX_SIZE_TRAIN: 512
   MAX_SIZE_TEST: 512
-OUTPUT_DIR: "output/pascal_voc/faster_rcnn_resnet_50_fpn_3x"
+OUTPUT_DIR: "output/pascal_voc/faster_rcnn_resnet_18_fpn_3x"
