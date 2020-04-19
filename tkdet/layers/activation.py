@@ -3,9 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 __all__ = [
+    "HardSigmoid",
+    "HardSwish",
     "Sigmoid",
     "Swish",
     "get_activation",
+    "hard_sigmoid",
+    "hard_swish",
     "memory_efficient_swish",
     "sigmoid",
     "swish",
@@ -70,6 +74,47 @@ class MemoryEfficientSwish(nn.Module):
         return memory_efficient_swish(x)
 
 
+def hard_sigmoid(x, inplace: bool = False):
+    if inplace:
+        return F.relu6(x.add_(3), inplace).div_(6)
+    else:
+        return F.relu6(x + 3, inplace) / 6
+
+
+class HardSigmoid(nn.Module):
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+
+        self.inplace = inplace
+
+    def forward(self, x):
+        return hard_sigmoid(x, inplace)
+
+    def extra_repr(self):
+        return "inplace=True" if self.inplace else ""
+
+
+def hard_swish(x, inplace: bool = False):
+    x_sigmoid = (F.relu6(x + 3) / 6)
+    if inplace:
+        return x.mul_(x_sigmoid)
+    else:
+        return x.mul(x_sigmoid)
+
+
+class HardSwish(nn.Module):
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+
+        self.inplace = inplace
+
+    def forward(self, x):
+        return hard_swish(x, self.inplace)
+
+    def extra_repr(self):
+        return "inplace=True" if self.inplace else ""
+
+
 def get_activation(activation, inplace=False):
     if isinstance(activation, str):
         if len(activation) == 0:
@@ -87,5 +132,9 @@ def get_activation(activation, inplace=False):
             "memory_efficient_swish": memory_efficient_swish,
             "LeakyReLU": nn.LeakyReLU(0.1, inplace),
             "leaky_relu": lambda x: F.leaky_relu(x, 0.1, inplace),
+            "HardSigmoid": HardSigmoid(inplace),
+            "hard_sigmoid": lambda x: hard_sigmoid(x, inplace),
+            "HardSwish": HardSwish(inplace),
+            "hard_swish": lambda x: hard_swish(x, inplace),
         }[activation]
     return activation
