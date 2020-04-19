@@ -5,10 +5,12 @@ from tkdet.data import MetadataCatalog
 from .builtin_meta import _get_builtin_metadata
 from .cityscapes import load_cityscapes_instances
 from .cityscapes import load_cityscapes_semantic
+from .coco import register_coco_instances
+from .coco import register_coco_panoptic_separated
 from .lvis import get_lvis_instances_meta
 from .lvis import register_lvis_instances
 from .pascal_voc import register_pascal_voc
-from .coco import register_coco_instances, register_coco_panoptic_separated
+from .visdrone import register_visdrone
 
 _PREDEFINED_SPLITS_COCO = {}
 _PREDEFINED_SPLITS_COCO["coco"] = {
@@ -188,8 +190,19 @@ def register_all_pascal_voc(root):
         MetadataCatalog.get(name).evaluator_type = "pascal_voc"
 
 
+def register_all_visdrone(root):
+    SPLITS = [
+        ("vis_2018_train", "VisDrone2018", "train"),
+        ("vis_2018_val", "VisDrone2018", "val"),        
+    ]
+    for name, dirname, split in SPLITS:
+        register_visdrone(name, os.path.join(root, dirname), split)
+        MetadataCatalog.get(name).evaluator_type = "coco"
+
+
 _root = os.getenv("tkdet_DATASETS", "datasets")
 register_all_coco(_root)
 register_all_lvis(_root)
 register_all_cityscapes(_root)
 register_all_pascal_voc(_root)
+register_all_visdrone(_root)
