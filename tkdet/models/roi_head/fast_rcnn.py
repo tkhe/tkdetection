@@ -10,13 +10,14 @@ from tkdet.layers import ShapeSpec
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
 from tkdet.models.box_regression import Box2BoxTransform
+from tkdet.models.box_regression import apply_deltas_broadcast
 from tkdet.structures import Boxes
 from tkdet.structures import Instances
 from tkdet.utils.events import get_event_storage
 
-logger = logging.getLogger(__name__)
+__all__ = ["fast_rcnn_inference", "FastRCNNOutputLayers"]
 
-__all__ = ["FastRCNNOutputLayers"]
+logger = logging.getLogger(__name__)
 
 
 def fast_rcnn_inference(boxes, scores, image_shapes, score_thresh, nms_thresh, topk_per_image):
@@ -174,14 +175,11 @@ class FastRCNNOutputs(object):
         return loss_box_reg
 
     def _predict_boxes(self):
-        num_pred = len(self.proposals)
-        B = self.proposals.tensor.shape[1]
-        K = self.pred_proposal_deltas.shape[1] // B
-        boxes = self.box2box_transform.apply_deltas(
-            self.pred_proposal_deltas.view(num_pred * K, B),
-            self.proposals.tensor.unsqueeze(1).expand(num_pred, K, B).reshape(-1, B),
+        return apply_deltas_broadcast(
+            self.box2box_transform,
+            self.pred_proposal_deltas,
+            self.proposals.tensor
         )
-        return boxes.view(num_pred, K * B)
 
     def losses(self):
         return {
@@ -190,27 +188,22 @@ class FastRCNNOutputs(object):
         }
 
     def predict_boxes(self):
+        """
+        Deprecated
+        """
         return self._predict_boxes().split(self.num_preds_per_image, dim=0)
 
-    def predict_boxes_for_gt_classes(self):
-        predicted_boxes = self._predict_boxes()
-        B = self.proposals.tensor.shape[1]
-        if predicted_boxes.shape[1] > B:
-            num_pred = len(self.proposals)
-            num_classes = predicted_boxes.shape[1] // B
-            gt_classes = torch.clamp(self.gt_classes, 0, num_classes - 1)
-            predicted_boxes = predicted_boxes.view(
-                num_pred,
-                num_classes,
-                B
-            )[torch.arange(num_pred, dtype=torch.long, device=predicted_boxes.device), gt_classes]
-        return predicted_boxes.split(self.num_preds_per_image, dim=0)
-
     def predict_probs(self):
+        """
+        Deprecated
+        """
         probs = F.softmax(self.pred_class_logits, dim=-1)
         return probs.split(self.num_preds_per_image, dim=0)
 
     def inference(self, score_thresh, nms_thresh, topk_per_image):
+        """
+        Deprecated
+        """
         boxes = self.predict_boxes()
         scores = self.predict_probs()
         image_shapes = self.image_shapes
@@ -294,41 +287,58 @@ class FastRCNNOutputLayers(nn.Module):
         ).losses()
 
     def inference(self, predictions, proposals):
-        scores, proposal_deltas = predictions
-        return FastRCNNOutputs(
-            self.box2box_transform,
+        boxes = self.predict_boxes(predictions, proposals)
+        scores = self.predict_probs(predictions, proposals)
+        image_shapes = [x.image_size for x in proposals]
+        return fast_rcnn_inference(
+            boxes,
             scores,
-            proposal_deltas,
-            proposals,
-            self.smooth_l1_beta
-        ).inference(self.test_score_thresh, self.test_nms_thresh, self.test_topk_per_image)
+            image_shapes,
+            self.test_score_thresh,
+            self.test_nms_thresh,
+            self.test_topk_per_image,
+        )
 
     def predict_boxes_for_gt_classes(self, predictions, proposals):
+        if not len(proposals):
+            return []
         scores, proposal_deltas = predictions
-        return FastRCNNOutputs(
+        proposal_boxes = [p.proposal_boxes for p in proposals]
+        proposal_boxes = proposal_boxes[0].cat(proposal_boxes).tensor
+        N, B = proposal_boxes.shape
+        predict_boxes = apply_deltas_broadcast(
             self.box2box_transform,
-            scores,
-            proposal_deltas,
-            proposals,
-            self.smooth_l1_beta
-        ).predict_boxes_for_gt_classes()
+            proposal_deltas, proposal_boxes
+        )
+
+        K = predict_boxes.shape[1] // B
+        if K > 1:
+            gt_classes = torch.cat([p.gt_classes for p in proposals], dim=0)
+            gt_classes = gt_classes.clamp_(0, K - 1)
+
+            predict_boxes = predict_boxes.view(N, K, B)[
+                torch.arange(N, dtype=torch.long, device=predict_boxes.device),
+                gt_classes
+            ]
+        num_prop_per_image = [len(p) for p in proposals]
+        return predict_boxes.split(num_prop_per_image)
 
     def predict_boxes(self, predictions, proposals):
-        scores, proposal_deltas = predictions
-        return FastRCNNOutputs(
+        if not len(proposals):
+            return []
+        _, proposal_deltas = predictions
+        num_prop_per_image = [len(p) for p in proposals]
+        proposal_boxes = [p.proposal_boxes for p in proposals]
+        proposal_boxes = proposal_boxes[0].cat(proposal_boxes).tensor
+        predict_boxes = apply_deltas_broadcast(
             self.box2box_transform,
-            scores,
             proposal_deltas,
-            proposals,
-            self.smooth_l1_beta
-        ).predict_boxes()
+            proposal_boxes
+        )
+        return predict_boxes.split(num_prop_per_image)
 
     def predict_probs(self, predictions, proposals):
-        scores, proposal_deltas = predictions
-        return FastRCNNOutputs(
-            self.box2box_transform,
-            scores,
-            proposal_deltas,
-            proposals,
-            self.smooth_l1_beta
-        ).predict_probs()
+        scores, _ = predictions
+        num_inst_per_image = [len(p) for p in proposals]
+        probs = F.softmax(scores, dim=-1)
+        return probs.split(num_inst_per_image, dim=0)

@@ -5,7 +5,22 @@ import torch
 
 _DEFAULT_SCALE_CLAMP = math.log(1000.0 / 16)
 
-__all__ = ["Box2BoxTransform"]
+__all__ = ["Box2BoxTransform", "apply_deltas_broadcast"]
+
+
+def apply_deltas_broadcast(box2box_transform, deltas, boxes):
+    assert deltas.dim() == boxes.dim() == 2, f"{deltas.shape}, {boxes.shape}"
+
+    N, B = boxes.shape
+    assert deltas.shape[1] % B == 0, \
+        f"Second dim of deltas should be a multiple of {B}. Got {deltas.shape}"
+
+    K = deltas.shape[1] // B
+    ret = box2box_transform.apply_deltas(
+        deltas.view(N * K, B),
+        boxes.unsqueeze(1).expand(N, K, B).reshape(N * K, B)
+    )
+    return ret.view(N, K * B)
 
 
 @torch.jit.script
