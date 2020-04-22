@@ -36,6 +36,8 @@ _C.MODEL.BACKBONE.NAME = ""
 
 _C.MODEL.BACKBONE.OUT_FEATURES = []
 
+_C.MODEL.BACKBONE.FREEZE_AT = 2
+
 
 # -----------------------------------------------------------------------------
 # Neck options

@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from fvcore.nn import weight_init
 
+from tkdet.layers import FrozenBatchNorm2d
 from tkdet.layers import get_norm
 from .base import Backbone
 from .build import BACKBONE_REGISTRY
@@ -56,6 +57,12 @@ class BasicBlock(nn.Module):
         self.bn2 = get_norm(norm, out_channels)
         self.downsample = downsample
 
+    def freeze(self):
+        for p in self.parameters():
+            p.requires_grad = False
+        FrozenBatchNorm2d.convert_frozen_batchnorm(self)
+        return self
+
     def forward(self, x):
         identity = x
 
@@ -99,6 +106,12 @@ class Bottleneck(nn.Module):
         self.bn3 = get_norm(norm, out_channels * self.expansion)
         self.downsample = downsample
 
+    def freeze(self):
+        for p in self.parameters():
+            p.requires_grad = False
+        FrozenBatchNorm2d.convert_frozen_batchnorm(self)
+        return self
+
     def forward(self, x):
         identity = x
 
@@ -136,6 +149,7 @@ class ResNet(Backbone):
         replace_stride_with_dilation=None,
         norm="",
         out_features=None,
+        freeze_at=0,
         num_classes=1000
     ):
         super().__init__()
@@ -229,6 +243,18 @@ class ResNet(Backbone):
             )
         return nn.Sequential(*layers)
 
+    def freeze(self, freeze_at=0):
+        if freeze_at >= 1:
+            for p in self.conv1.parameters():
+                p.requires_grad = False
+            for p in self.bn1.parameters():
+                p.requires_grad = False
+            for idx in range(1, freeze_at):
+                module = getattr(self, f"layer{idx}")
+                for block in module.children():
+                    block.freeze()
+        return self
+
     def forward(self, x):
         outputs = {}
 
@@ -269,6 +295,7 @@ def get_resnet(cfg, block, layers, groups=1, width_per_group=64):
     norm = cfg.RESNET.NORM
     zero_init_residual = cfg.RESNET.ZERO_INIT_RESIDUAL
     replace_stride_with_dilation = cfg.RESNET.REPLACE_STRIDE_WITH_DILATION
+    freeze_at = cfg.MODEL.BACKBONE.FREEZE_AT
     model = ResNet(
         block,
         layers,
@@ -277,7 +304,8 @@ def get_resnet(cfg, block, layers, groups=1, width_per_group=64):
         width_per_group,
         replace_stride_with_dilation,
         norm,
-        out_features
+        out_features,
+        freeze_at
     )
     return model
 
