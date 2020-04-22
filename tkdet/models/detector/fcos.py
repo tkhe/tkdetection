@@ -128,8 +128,8 @@ class FCOS(Detector):
         self.topk_candidates = cfg.FCOS.TOPK_CANDIDATES
         self.max_detections_per_image = cfg.TEST.DETECTIONS_PER_IMAGE
 
-        self.register_buffer("pixel_mean", torch.Tensor(cfg.MODEL.PIXEL_MEAN).view(-1, 1, 1))
-        self.register_buffer("pixel_std", torch.Tensor(cfg.MODEL.PIXEL_STD).view(-1, 1, 1))
+        self.register_buffer("pixel_mean", torch.Tensor(cfg.INPUT.PIXEL_MEAN).view(-1, 1, 1))
+        self.register_buffer("pixel_std", torch.Tensor(cfg.INPUT.PIXEL_STD).view(-1, 1, 1))
 
     @property
     def device(self):

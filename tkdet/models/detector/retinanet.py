@@ -86,8 +86,8 @@ class RetinaNet(Detector):
             allow_low_quality_matches=True
         )
 
-        self.register_buffer("pixel_mean", torch.Tensor(cfg.MODEL.PIXEL_MEAN).view(-1, 1, 1))
-        self.register_buffer("pixel_std", torch.Tensor(cfg.MODEL.PIXEL_STD).view(-1, 1, 1))
+        self.register_buffer("pixel_mean", torch.Tensor(cfg.INPUT.PIXEL_MEAN).view(-1, 1, 1))
+        self.register_buffer("pixel_std", torch.Tensor(cfg.INPUT.PIXEL_STD).view(-1, 1, 1))
 
     @property
     def device(self):

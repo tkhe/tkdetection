@@ -36,8 +36,8 @@ class GeneralizedRCNN(Detector):
 
         assert len(cfg.INPUT.PIXEL_MEAN) == len(cfg.INPUT.PIXEL_STD)
 
-        self.register_buffer("pixel_mean", torch.Tensor(cfg.MODEL.PIXEL_MEAN).view(-1, 1, 1))
-        self.register_buffer("pixel_std", torch.Tensor(cfg.MODEL.PIXEL_STD).view(-1, 1, 1))
+        self.register_buffer("pixel_mean", torch.Tensor(cfg.INPUT.PIXEL_MEAN).view(-1, 1, 1))
+        self.register_buffer("pixel_std", torch.Tensor(cfg.INPUT.PIXEL_STD).view(-1, 1, 1))
 
     @property
     def device(self):
