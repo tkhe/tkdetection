@@ -22,7 +22,6 @@ class GeneralizedRCNN(Detector):
     def __init__(self, cfg):
         super().__init__()
 
-        self.device = torch.device(cfg.MODEL.DEVICE)
         self.backbone = build_backbone(cfg)
         self.neck = build_neck(cfg, self.backbone.output_shape())
         if self.neck is not None:

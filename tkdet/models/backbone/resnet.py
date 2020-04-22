@@ -204,6 +204,8 @@ class ResNet(Backbone):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
+        self.freeze(freeze_at)
+
     def _make_layers(self, block, channels, blocks, stride=1, dilate=False):
         norm = self.norm
         downsample = None
