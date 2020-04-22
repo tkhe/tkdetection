@@ -32,7 +32,7 @@ class DetectionCheckpointer(Checkpointer):
         if self.align_model_prefix:
             self.align_model_prefix(checkpoint["model"])
 
-        super()._load_model(checkpoint)
+        return super()._load_model(checkpoint)
 
 
 def _align_models_prefix(state_dict):
