@@ -5,6 +5,7 @@ from typing import List
 import torch
 import torch.nn as nn
 
+from tkdet.config import configurable
 from tkdet.layers import ShapeSpec
 from tkdet.structures import Boxes
 from .build import ANCHOR_REGISTRY
@@ -54,29 +55,53 @@ def _create_grid_offsets(size, stride, offset, device):
     return shift_x, shift_y
 
 
+def _broadcast_params(params, num_features, name):
+    assert isinstance(params, (list, tuple)), \
+        f"{name} in anchor generator has to be a list! Got {params}."
+    assert len(params), f"{name} in anchor generator cannot be empty!"
+
+    if not isinstance(params[0], (list, tuple)):
+        return [params] * num_features
+    if len(params) == 1:
+        return list(params) * num_features
+    assert len(params) == num_features, (
+        f"Got {name} of length {len(params)} in anchor generator, "
+        "but the number of input features is {num_features}!"
+    )
+
+    return params
+
+
 @ANCHOR_REGISTRY.register()
 class DefaultAnchorGenerator(nn.Module):
-    def __init__(self, cfg, input_shape: List[ShapeSpec]):
+    box_dim: int = 4
+
+    @configurable
+    def __init__(self, *, sizes, aspect_ratios, strides, offset=0.5):
+        """
+        NOTE: This interface is experimental.
+        """
         super().__init__()
 
-        sizes = cfg.MODEL.ANCHOR.SIZES
-        aspect_ratios = cfg.MODEL.ANCHOR.ASPECT_RATIOS
-        self.strides = [x.stride for x in input_shape]
-        self.offset = cfg.MODEL.ANCHOR.OFFSET
-
-        assert 0.0 <= self.offset < 1.0, self.offset
-
+        self.strides = strides
         self.num_features = len(self.strides)
+        sizes = _broadcast_params(sizes, self.num_features, "sizes")
+        aspect_ratios = _broadcast_params(aspect_ratios, self.num_features, "aspect_ratios")
         self.cell_anchors = self._calculate_anchors(sizes, aspect_ratios)
+        assert 0.0 <= offset < 1.0, offset
+
+        self.offset = offset
+
+    @classmethod
+    def from_config(cls, cfg, input_shape: List[ShapeSpec]):
+        return {
+            "sizes": cfg.MODEL.ANCHOR.SIZES,
+            "aspect_ratios": cfg.MODEL.ANCHOR.ASPECT_RATIOS,
+            "strides": [x.stride for x in input_shape],
+            "offset": cfg.MODEL.ANCHOR.OFFSET,
+        }
 
     def _calculate_anchors(self, sizes, aspect_ratios):
-        if len(sizes) == 1:
-            sizes *= self.num_features
-        if len(aspect_ratios) == 1:
-            aspect_ratios *= self.num_features
-        assert self.num_features == len(sizes)
-        assert self.num_features == len(aspect_ratios)
-
         cell_anchors = [
             self.generate_cell_anchors(s, a).float() for s, a in zip(sizes, aspect_ratios)
         ]
@@ -84,14 +109,10 @@ class DefaultAnchorGenerator(nn.Module):
         return BufferList(cell_anchors)
 
     @property
-    def box_dim(self):
-        return 4
-
-    @property
     def num_cell_anchors(self):
         return [len(cell_anchors) for cell_anchors in self.cell_anchors]
 
-    def grid_anchors(self, grid_sizes):
+    def _grid_anchors(self, grid_sizes):
         anchors = []
         for size, stride, base_anchors in zip(grid_sizes, self.strides, self.cell_anchors):
             shift_x, shift_y = _create_grid_offsets(size, stride, self.offset, base_anchors.device)
@@ -115,7 +136,7 @@ class DefaultAnchorGenerator(nn.Module):
     def forward(self, features):
         num_images = len(features[0])
         grid_sizes = [feature_map.shape[-2:] for feature_map in features]
-        anchors_over_all_feature_maps = self.grid_anchors(grid_sizes)
+        anchors_over_all_feature_maps = self._grid_anchors(grid_sizes)
 
         anchors_in_image = []
         for anchors_per_feature_map in anchors_over_all_feature_maps:
