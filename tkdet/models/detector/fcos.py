@@ -128,11 +128,12 @@ class FCOS(Detector):
         self.topk_candidates = cfg.FCOS.TOPK_CANDIDATES
         self.max_detections_per_image = cfg.TEST.DETECTIONS_PER_IMAGE
 
-        self.device = torch.device(cfg.MODEL.DEVICE)
-        pixel_mean = torch.Tensor(cfg.INPUT.PIXEL_MEAN).to(self.device).view(3, 1, 1)
-        pixel_std = torch.Tensor(cfg.INPUT.PIXEL_STD).to(self.device).view(3, 1, 1)
-        self.normalizer = lambda x: (x - pixel_mean) / pixel_std
-        self.to(self.device)
+        self.register_buffer("pixel_mean", torch.Tensor(cfg.MODEL.PIXEL_MEAN).view(-1, 1, 1))
+        self.register_buffer("pixel_std", torch.Tensor(cfg.MODEL.PIXEL_STD).view(-1, 1, 1))
+
+    @property
+    def device(self):
+        return self.pixel_mean.device
 
     def forward(self, batched_inputs):
         images = self.preprocess_inputs(batched_inputs)
@@ -429,7 +430,7 @@ class FCOS(Detector):
 
     def preprocess_inputs(self, batched_inputs):
         images = [x["image"].to(self.device) for x in batched_inputs]
-        images = [self.normalizer(x) for x in images]
+        images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.neck.size_divisibility)
         return images
 

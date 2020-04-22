@@ -57,7 +57,6 @@ class RetinaNet(Detector):
     def __init__(self, cfg):
         super().__init__()
 
-        self.device = torch.device(cfg.MODEL.DEVICE)
         self.num_classes = cfg.MODEL.NUM_CLASSES
 
         self.focal_loss_alpha = cfg.LOSS.FOCAL_LOSS.ALPHA
@@ -87,13 +86,12 @@ class RetinaNet(Detector):
             allow_low_quality_matches=True
         )
 
-        assert len(cfg.INPUT.PIXEL_MEAN) == len(cfg.INPUT.PIXEL_STD)
+        self.register_buffer("pixel_mean", torch.Tensor(cfg.MODEL.PIXEL_MEAN).view(-1, 1, 1))
+        self.register_buffer("pixel_std", torch.Tensor(cfg.MODEL.PIXEL_STD).view(-1, 1, 1))
 
-        num_channels = len(cfg.INPUT.PIXEL_MEAN)
-        pixel_mean = torch.Tensor(cfg.INPUT.PIXEL_MEAN).to(self.device).view(num_channels, 1, 1)
-        pixel_std = torch.Tensor(cfg.INPUT.PIXEL_STD).to(self.device).view(num_channels, 1, 1)
-        self.normalizer = lambda x: (x - pixel_mean) / pixel_std
-        self.to(self.device)
+    @property
+    def device(self):
+        return self.pixel_mean.device
 
     def visualize_training(self, batched_inputs, results):
         from tkdet.utils.visualizer import Visualizer
@@ -294,7 +292,7 @@ class RetinaNet(Detector):
 
     def preprocess_inputs(self, batched_inputs):
         images = [x["image"].to(self.device) for x in batched_inputs]
-        images = [self.normalizer(x) for x in images]
+        images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.neck.size_divisibility)
         return images
 

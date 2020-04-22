@@ -32,7 +32,17 @@ class DetectionCheckpointer(Checkpointer):
         if self.align_model_prefix:
             self.align_model_prefix(checkpoint["model"])
 
-        return super()._load_model(checkpoint)
+        incompatible = super()._load_model(checkpoint)
+        if incompatible is None:
+            return None
+
+        model_buffers = dict(self.model.named_buffers(recurse=False))
+        for k in ["pixel_mean", "pixel_std"]:
+            if k in model_buffers:
+                try:
+                    incompatible.missing_keys.remove(k)
+                except ValueError:
+                    pass
 
 
 def _align_models_prefix(state_dict):
