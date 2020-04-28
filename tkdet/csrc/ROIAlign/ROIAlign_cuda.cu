@@ -301,10 +301,11 @@ namespace tkdet {
             return output;
         }
 
+        auto input_ = input.contiguous(), rois_ = rois.contiguous();
         AT_DISPATCH_FLOATING_TYPES(input.scalar_type(), "ROIAlign_forward", [&] {
             RoIAlignForward<scalar_t><<<grid, block, 0, stream>>>(
                 output_size,
-                input.contiguous().data_ptr<scalar_t>(),
+                input_.data_ptr<scalar_t>(),
                 spatial_scale,
                 channels,
                 height,
@@ -312,7 +313,7 @@ namespace tkdet {
                 pooled_height,
                 pooled_width,
                 sampling_ratio,
-                rois.contiguous().data_ptr<scalar_t>(),
+                rois_.data_ptr<scalar_t>(),
                 output.data_ptr<scalar_t>(),
                 aligned
             );
@@ -357,10 +358,11 @@ namespace tkdet {
             return grad_input;
         }
 
+        auto grad_ = grad.contiguous(), rois_ = rois.contiguous();
         AT_DISPATCH_FLOATING_TYPES(grad.scalar_type(), "ROIAlign_backward", [&] {
             RoIAlignBackwardFeature<scalar_t><<<grid, block, 0, stream>>>(
                 grad.numel(),
-                grad.contiguous().data_ptr<scalar_t>(),
+                grad_.data_ptr<scalar_t>(),
                 num_rois,
                 spatial_scale,
                 channels,
@@ -370,7 +372,7 @@ namespace tkdet {
                 pooled_width,
                 sampling_ratio,
                 grad_input.data_ptr<scalar_t>(),
-                rois.contiguous().data_ptr<scalar_t>(),
+                rois_.data_ptr<scalar_t>(),
                 aligned
             );
         });
