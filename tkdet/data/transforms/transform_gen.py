@@ -16,6 +16,7 @@ from fvcore.transforms.transform import VFlipTransform
 from .transform import ExtentTransform, ResizeTransform, RotationTransform
 
 __all__ = [
+    "RandomApply",
     "RandomBrightness",
     "RandomContrast",
     "RandomCrop",
@@ -79,6 +80,28 @@ class TransformGen(ABC):
             return super().__repr__()
 
     __str__ = __repr__
+
+
+class RandomApply(TransformGen):
+    def __init__(self, transform, prob=0.5):
+        super().__init__()
+
+        assert isinstance(transform, (Transform, TransformGen)), \
+            f"The given transform must either be a Transform or TransformGen instance. "
+        assert 0.0 <= prob <= 1.0, f"Probablity must be between 0.0 and 1.0, got {prob})"
+
+        self.prob = prob
+        self.transform = transform
+
+    def get_transform(self, img):
+        do = self._rand_range() < self.prob
+        if do:
+            if isinstance(self.transform, TransformGen):
+                return self.transform.get_transform(img)
+            else:
+                return self.transform
+        else:
+            return NoOpTransform()
 
 
 class RandomFlip(TransformGen):
