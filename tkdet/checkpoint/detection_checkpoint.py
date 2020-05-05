@@ -1,3 +1,6 @@
+from typing import Optional
+from typing import List
+
 from fvcore.common.checkpoint import Checkpointer
 
 import tkdet.utils.comm as comm
@@ -17,10 +20,10 @@ class DetectionCheckpointer(Checkpointer):
 
         self.align_model_prefix = None
 
-    def load(self, path: str):
+    def load(self, path: str, checkpointables: Optional[List[str]] = None) -> object:
         if path.startswith("torchvision://") or path.startswith("local://"):
             self.align_model_prefix = _align_models_prefix
-        return super().load(path)
+        return super().load(path, checkpointables)
 
     def _load_file(self, filename):
         loaded = super()._load_file(filename)
