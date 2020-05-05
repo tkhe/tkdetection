@@ -1,19 +1,15 @@
 import itertools
 import logging
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
 from tkdet.layers import smooth_l1_loss
-from tkdet.models.sampling import subsample_labels
 from tkdet.structures import Boxes
 from tkdet.structures import Instances
-from tkdet.structures import pairwise_iou
 from tkdet.utils.events import get_event_storage
-from tkdet.utils.memory import retry_if_cuda_oom
 
 logger = logging.getLogger(__name__)
 
@@ -94,13 +90,13 @@ def find_top_rpn_proposals(
 
 
 def rpn_losses(
-    gt_objectness_logits,
+    gt_labels,
     gt_anchor_deltas,
     pred_objectness_logits,
     pred_anchor_deltas,
-    smooth_l1_beta,
+    smooth_l1_beta
 ):
-    pos_masks = gt_objectness_logits == 1
+    pos_masks = gt_labels == 1
     localization_loss = smooth_l1_loss(
         pred_anchor_deltas[pos_masks],
         gt_anchor_deltas[pos_masks],
@@ -108,10 +104,10 @@ def rpn_losses(
         reduction="sum"
     )
 
-    valid_masks = gt_objectness_logits >= 0
+    valid_masks = gt_labels >= 0
     objectness_loss = F.binary_cross_entropy_with_logits(
         pred_objectness_logits[valid_masks],
-        gt_objectness_logits[valid_masks].to(torch.float32),
+        gt_labels[valid_masks].to(torch.float32),
         reduction="sum",
     )
     return objectness_loss, localization_loss
@@ -121,128 +117,68 @@ class RPNOutputs(object):
     def __init__(
         self,
         box2box_transform,
-        anchor_matcher,
         batch_size_per_image,
-        positive_fraction,
         images,
         pred_objectness_logits,
         pred_anchor_deltas,
         anchors,
-        boundary_threshold=0,
+        gt_labels=None,
         gt_boxes=None,
         smooth_l1_beta=0.0,
     ):
         self.box2box_transform = box2box_transform
-        self.anchor_matcher = anchor_matcher
         self.batch_size_per_image = batch_size_per_image
-        self.positive_fraction = positive_fraction
         self.pred_objectness_logits = pred_objectness_logits
         self.pred_anchor_deltas = pred_anchor_deltas
-
         self.anchors = anchors
+
         self.gt_boxes = gt_boxes
+        self.gt_labels = gt_labels
         self.num_feature_maps = len(pred_objectness_logits)
         self.num_images = len(images)
         self.image_sizes = images.image_sizes
-        self.boundary_threshold = boundary_threshold
         self.smooth_l1_beta = smooth_l1_beta
 
-    def _get_ground_truth(self):
-        gt_objectness_logits = []
-        gt_anchor_deltas = []
-        anchors = Boxes.cat(self.anchors)
-        for image_size_i, gt_boxes_i in zip(self.image_sizes, self.gt_boxes):
-            match_quality_matrix = retry_if_cuda_oom(pairwise_iou)(gt_boxes_i, anchors)
-            matched_idxs, gt_objectness_logits_i = retry_if_cuda_oom(
-                self.anchor_matcher
-            )(match_quality_matrix)
-            gt_objectness_logits_i = gt_objectness_logits_i.to(device=gt_boxes_i.device)
-            del match_quality_matrix
-
-            if self.boundary_threshold >= 0:
-                anchors_inside_image = anchors.inside_box(image_size_i, self.boundary_threshold)
-                gt_objectness_logits_i[~anchors_inside_image] = -1
-
-            if len(gt_boxes_i) == 0:
-                gt_anchor_deltas_i = torch.zeros_like(anchors.tensor)
-            else:
-                matched_gt_boxes = gt_boxes_i[matched_idxs]
-                gt_anchor_deltas_i = self.box2box_transform.get_deltas(
-                    anchors.tensor,
-                    matched_gt_boxes.tensor
-                )
-
-            gt_objectness_logits.append(gt_objectness_logits_i)
-            gt_anchor_deltas.append(gt_anchor_deltas_i)
-
-        return gt_objectness_logits, gt_anchor_deltas
-
     def losses(self):
-        def resample(label):
-            pos_idx, neg_idx = subsample_labels(
-                label,
-                self.batch_size_per_image,
-                self.positive_fraction,
-                0
-            )
-            label.fill_(-1)
-            label.scatter_(0, pos_idx, 1)
-            label.scatter_(0, neg_idx, 0)
-            return label
+        gt_labels = torch.stack(self.gt_labels)
+        anchors = self.anchors[0].cat(self.anchors).tensor
+        gt_anchor_deltas = [self.box2box_transform.get_deltas(anchors, k) for k in self.gt_boxes]
+        gt_anchor_deltas = torch.stack(gt_anchor_deltas)
 
-        gt_objectness_logits, gt_anchor_deltas = self._get_ground_truth()
-        num_anchors_per_map = [np.prod(x.shape[1:]) for x in self.pred_objectness_logits]
-        num_anchors_per_image = sum(num_anchors_per_map)
-
-        gt_objectness_logits = torch.stack(
-            [resample(label) for label in gt_objectness_logits],
-            dim=0
-        )
-
-        num_pos_anchors = (gt_objectness_logits == 1).sum().item()
-        num_neg_anchors = (gt_objectness_logits == 0).sum().item()
+        num_pos_anchors = (gt_labels == 1).sum().item()
+        num_neg_anchors = (gt_labels == 0).sum().item()
         storage = get_event_storage()
         storage.put_scalar("rpn/num_pos_anchors", num_pos_anchors / self.num_images)
         storage.put_scalar("rpn/num_neg_anchors", num_neg_anchors / self.num_images)
 
-        assert gt_objectness_logits.shape[1] == num_anchors_per_image
-
-        gt_objectness_logits = torch.split(gt_objectness_logits, num_anchors_per_map, dim=1)
-        gt_objectness_logits = cat([x.flatten() for x in gt_objectness_logits], dim=0)
-
-        gt_anchor_deltas = torch.stack(gt_anchor_deltas, dim=0)
-        assert gt_anchor_deltas.shape[1] == num_anchors_per_image
-
         B = gt_anchor_deltas.shape[2]
 
-        gt_anchor_deltas = torch.split(gt_anchor_deltas, num_anchors_per_map, dim=1)
-        gt_anchor_deltas = cat([x.reshape(-1, B) for x in gt_anchor_deltas], dim=0)
-
         pred_objectness_logits = cat(
-            [x.permute(0, 2, 3, 1).flatten() for x in self.pred_objectness_logits],
-            dim=0
+            [x.permute(0, 2, 3, 1).flatten(1) for x in self.pred_objectness_logits],
+            dim=1
         )
         pred_anchor_deltas = cat(
             [
                 x.view(x.shape[0], -1, B, x.shape[-2], x.shape[-1])
                 .permute(0, 3, 4, 1, 2)
-                .reshape(-1, B)
+                .flatten(1, -2)
                 for x in self.pred_anchor_deltas
             ],
-            dim=0,
+            dim=1,
         )
 
         objectness_loss, localization_loss = rpn_losses(
-            gt_objectness_logits,
+            gt_labels,
             gt_anchor_deltas,
             pred_objectness_logits,
             pred_anchor_deltas,
             self.smooth_l1_beta,
         )
-        normalizer = 1.0 / (self.batch_size_per_image * self.num_images)
-        loss_cls = objectness_loss * normalizer
-        loss_loc = localization_loss * normalizer
-        losses = {"loss_rpn_cls": loss_cls, "loss_rpn_loc": loss_loc}
+        normalizer = self.batch_size_per_image * self.num_images
+        losses = {
+            "loss_rpn_cls": objectness_loss / normalizer,
+            "loss_rpn_loc": localization_loss / normalizer,
+        }
 
         return losses
 
@@ -254,7 +190,7 @@ class RPNOutputs(object):
             pred_anchor_deltas_i = (
                 pred_anchor_deltas_i.view(N, -1, B, Hi, Wi).permute(0, 3, 4, 1, 2).reshape(-1, B)
             )
-            anchors_i = cat([anchors_i.tensor] * N, dim=0)
+            anchors_i = anchors_i.tensor.unsqueeze(0).expand(N, -1, -1).reshape(-1, B)
             proposals_i = self.box2box_transform.apply_deltas(pred_anchor_deltas_i, anchors_i)
             proposals.append(proposals_i.view(N, -1, B))
         return proposals

@@ -6,10 +6,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tkdet.layers import ShapeSpec
+from tkdet.structures import Boxes
+from tkdet.structures import Instances
+from tkdet.structures import pairwise_iou
+from tkdet.utils.memory import retry_if_cuda_oom
 from tkdet.utils.registry import Registry
 from tkdet.models.anchor import build_anchor_generator
 from tkdet.models.box_regression import Box2BoxTransform
 from tkdet.models.matcher import Matcher
+from tkdet.models.sampling import subsample_labels
 from .build import RPN_REGISTRY
 from .rpn_outputs import RPNOutputs
 from .rpn_outputs import find_top_rpn_proposals
@@ -97,22 +102,67 @@ class RPN(nn.Module):
         )
         self.rpn_head = build_rpn_head(cfg, [input_shape[f] for f in self.in_features])
 
-    def forward(self, images, features, gt_instances=None):
-        gt_boxes = [x.gt_boxes for x in gt_instances] if gt_instances is not None else None
+    def _subsample_labels(self, label):
+        pos_idx, neg_idx = subsample_labels(
+            label,
+            self.batch_size_per_image,
+            self.positive_fraction,
+            0
+        )
+        label.fill_(-1)
+        label.scatter_(0, pos_idx, 1)
+        label.scatter_(0, neg_idx, 0)
+        return label
+
+    @torch.no_grad()
+    def label_and_sample_anchors(self, anchors: List[Boxes], gt_instances: List[Instances]):
+        anchors = Boxes.cat(anchors)
+
+        gt_boxes = [x.gt_boxes for x in gt_instances]
+        image_sizes = [x.image_size for x in gt_instances]
         del gt_instances
+
+        gt_labels = []
+        matched_gt_boxes = []
+        for image_size_i, gt_boxes_i in zip(image_sizes, gt_boxes):
+            match_quality_matrix = retry_if_cuda_oom(pairwise_iou)(gt_boxes_i, anchors)
+            matched_idxs, gt_labels_i = retry_if_cuda_oom(self.anchor_matcher)(match_quality_matrix)
+            gt_labels_i = gt_labels_i.to(device=gt_boxes_i.device)
+            del match_quality_matrix
+
+            if self.boundary_threshold >= 0:
+                anchors_inside_image = anchors.inside_box(image_size_i, self.boundary_threshold)
+                gt_labels_i[~anchors_inside_image] = -1
+
+            gt_labels_i = self._subsample_labels(gt_labels_i)
+
+            if len(gt_boxes_i) == 0:
+                matched_gt_boxes_i = torch.zeros_like(anchors.tensor)
+            else:
+                matched_gt_boxes_i = gt_boxes_i[matched_idxs].tensor
+
+            gt_labels.append(gt_labels_i)
+            matched_gt_boxes.append(matched_gt_boxes_i)
+        return gt_labels, matched_gt_boxes
+
+    def forward(self, images, features, gt_instances=None):
         features = [features[f] for f in self.in_features]
         pred_objectness_logits, pred_anchor_deltas = self.rpn_head(features)
         anchors = self.anchor_generator(features)
+
+        if self.training:
+            gt_labels, gt_boxes = self.label_and_sample_anchors(anchors, gt_instances)
+        else:
+            gt_labels, gt_boxes = None, None
+
         outputs = RPNOutputs(
             self.box2box_transform,
-            self.anchor_matcher,
             self.batch_size_per_image,
-            self.positive_fraction,
             images,
             pred_objectness_logits,
             pred_anchor_deltas,
             anchors,
-            self.boundary_threshold,
+            gt_labels,
             gt_boxes,
             self.smooth_l1_beta,
         )
