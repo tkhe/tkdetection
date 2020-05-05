@@ -245,7 +245,7 @@ class RandomCrop(TransformGen):
             ch, cw = crop_size + np.random.rand(2) * (1 - crop_size)
             return int(h * ch + 0.5), int(w * cw + 0.5)
         elif self.crop_type == "absolute":
-            return self.crop_size
+            return (min(self.crop_size[0], h), min(self.crop_size[1], w))
         else:
             NotImplementedError(f"Unknown crop type {self.crop_type}")
 
