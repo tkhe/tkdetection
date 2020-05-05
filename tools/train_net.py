@@ -12,7 +12,8 @@ from tkdet.engine import default_argument_parser
 from tkdet.engine import default_setup
 from tkdet.engine import hooks
 from tkdet.engine import launch
-from tkdet.evaluation import CityscapesEvaluator
+from tkdet.evaluation import CityscapesInstanceEvaluator
+from tkdet.evaluation import CityscapesSemSegEvaluator
 from tkdet.evaluation import COCOEvaluator
 from tkdet.evaluation import COCOPanopticEvaluator
 from tkdet.evaluation import DatasetEvaluators
@@ -44,11 +45,16 @@ class Trainer(DefaultTrainer):
             evaluator_list.append(COCOEvaluator(dataset_name, cfg, True, output_folder))
         if evaluator_type == "coco_panoptic_seg":
             evaluator_list.append(COCOPanopticEvaluator(dataset_name, output_folder))
-        elif evaluator_type == "cityscapes":
+        if evaluator_type == "cityscapes_instance":
             assert torch.cuda.device_count() >= comm.get_rank(), \
                 "CityscapesEvaluator currently do not work with multiple machines."
 
-            return CityscapesEvaluator(dataset_name)
+            return CityscapesInstanceEvaluator(dataset_name)
+        if evaluator_type == "cityscapes_sem_seg":
+            assert torch.cuda.device_count() >= comm.get_rank(), \
+                "CityscapesEvaluator currently do not work with multiple machines."
+
+            return CityscapesSemSegEvaluator(dataset_name)
         elif evaluator_type == "pascal_voc":
             return PascalVOCDetectionEvaluator(dataset_name)
         elif evaluator_type == "lvis":

@@ -84,8 +84,8 @@ class ROIPooler(nn.Module):
         else:
             raise ValueError("Unknown pooler type: {}".format(pooler_type))
 
-        min_level = -math.log2(scales[0])
-        max_level = -math.log2(scales[-1])
+        min_level = -(math.log2(scales[0]))
+        max_level = -(math.log2(scales[-1]))
         assert (
             math.isclose(min_level, int(min_level))
             and math.isclose(max_level, int(max_level))

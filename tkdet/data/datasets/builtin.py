@@ -157,7 +157,7 @@ def register_all_cityscapes(root):
         MetadataCatalog.get(inst_key).set(
             image_dir=image_dir,
             gt_dir=gt_dir,
-            evaluator_type="cityscapes",
+            evaluator_type="cityscapes_instance",
             **meta
         )
 
@@ -169,7 +169,7 @@ def register_all_cityscapes(root):
         MetadataCatalog.get(sem_key).set(
             image_dir=image_dir,
             gt_dir=gt_dir,
-            evaluator_type="sem_seg",
+            evaluator_type="cityscapes_sem_seg",
             **meta
         )
 

@@ -327,7 +327,7 @@ class RetinaNetHead(nn.Module):
                     nn.init.normal_(layer.weight, mean=0, std=0.01)
                     nn.init.constant_(layer.bias, 0)
 
-        bias_value = -math.log((1 - prior_prob) / prior_prob)
+        bias_value = -(math.log((1 - prior_prob) / prior_prob))
         torch.nn.init.constant_(self.cls_score.bias, bias_value)
 
     def forward(self, features):
