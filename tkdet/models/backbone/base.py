@@ -27,3 +27,7 @@ class Backbone(nn.Module, ABC):
             )
             for name in self._out_features
         }
+
+    @classmethod
+    def freeze(cls, freeze_at=0):
+        raise NotImplementedError

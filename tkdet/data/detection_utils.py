@@ -3,7 +3,8 @@ import logging
 import numpy as np
 import pycocotools.mask as mask_util
 import torch
-from PIL import Image, ImageOps
+from PIL import Image
+from PIL import ImageOps
 from fvcore.common.file_io import PathManager
 
 from tkdet.structures import BitMasks

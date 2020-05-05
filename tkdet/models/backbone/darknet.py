@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tkdet.layers import Block
 from tkdet.layers import Conv2d
 from .base import Backbone
 from .build import BACKBONE_REGISTRY
@@ -12,7 +13,7 @@ __all__ = [
 ]
 
 
-class BasicBlock(nn.Module):
+class BasicBlock(Block):
     def __init__(
         self,
         in_channels,

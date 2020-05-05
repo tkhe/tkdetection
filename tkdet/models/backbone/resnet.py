@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from fvcore.nn import weight_init
 
+from tkdet.layers import Block
 from tkdet.layers import FrozenBatchNorm2d
 from tkdet.layers import get_norm
 from .base import Backbone
@@ -30,7 +31,7 @@ def conv1x1(in_channels, out_channels, stride=1):
     return nn.Conv2d(in_channels, out_channels, 1, stride, bias=False)
 
 
-class BasicBlock(nn.Module):
+class BasicBlock(Block):
     expansion = 1
 
     def __init__(
@@ -57,12 +58,6 @@ class BasicBlock(nn.Module):
         self.bn2 = get_norm(norm, out_channels)
         self.downsample = downsample
 
-    def freeze(self):
-        for p in self.parameters():
-            p.requires_grad = False
-        FrozenBatchNorm2d.convert_frozen_batchnorm(self)
-        return self
-
     def forward(self, x):
         identity = x
 
@@ -81,7 +76,7 @@ class BasicBlock(nn.Module):
         return out
 
 
-class Bottleneck(nn.Module):
+class Bottleneck(Block):
     expansion = 4
 
     def __init__(
@@ -105,12 +100,6 @@ class Bottleneck(nn.Module):
         self.conv3 = conv1x1(width, out_channels * self.expansion)
         self.bn3 = get_norm(norm, out_channels * self.expansion)
         self.downsample = downsample
-
-    def freeze(self):
-        for p in self.parameters():
-            p.requires_grad = False
-        FrozenBatchNorm2d.convert_frozen_batchnorm(self)
-        return self
 
     def forward(self, x):
         identity = x

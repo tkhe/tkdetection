@@ -25,7 +25,7 @@ class Conv2d(nn.Module):
     ):
         super().__init__()
 
-        if padding == "auto":
+        if padding == "auto" and dilation == 1:
             padding = (kernel_size - 1) // 2
 
         self.conv = nn.Conv2d(
@@ -66,7 +66,7 @@ class DepthwiseSeparableConv2d(nn.Module):
         out_channels,
         kernel_size,
         stride=1,
-        padding='auto',
+        padding="auto",
         dilation=1,
         bias=False,
         norm="",

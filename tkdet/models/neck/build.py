@@ -18,7 +18,6 @@ def build_neck(cfg, input_shape) -> Union[Neck, None]:
         return None
 
     neck = NECK_REGISTRY.get(cfg.MODEL.NECK.NAME)(cfg, input_shape)
-
     assert isinstance(neck, Neck)
 
     return neck

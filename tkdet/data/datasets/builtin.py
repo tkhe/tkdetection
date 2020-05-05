@@ -200,7 +200,7 @@ def register_all_visdrone(root):
         MetadataCatalog.get(name).evaluator_type = "coco"
 
 
-_root = os.getenv("tkdet_DATASETS", "datasets")
+_root = os.getenv("TKDET_DATASETS", "datasets")
 register_all_coco(_root)
 register_all_lvis(_root)
 register_all_cityscapes(_root)
