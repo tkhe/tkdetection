@@ -204,17 +204,18 @@ class RetinaNet(Detector):
     def get_ground_truth(self, anchors, targets):
         gt_classes = []
         gt_anchors_deltas = []
-        anchors = [Boxes.cat(anchors_i) for anchors_i in anchors]
+        anchors = Boxes.cat(anchors)
 
-        for anchors_per_image, targets_per_image in zip(anchors, targets):
-            match_quality_matrix = pairwise_iou(targets_per_image.gt_boxes, anchors_per_image)
+        for targets_per_image in targets:
+            match_quality_matrix = pairwise_iou(targets_per_image.gt_boxes, anchors)
             gt_matched_idxs, anchor_labels = self.matcher(match_quality_matrix)
 
             has_gt = len(targets_per_image) > 0
             if has_gt:
                 matched_gt_boxes = targets_per_image.gt_boxes[gt_matched_idxs]
                 gt_anchors_reg_deltas_i = self.box2box_transform.get_deltas(
-                    anchors_per_image.tensor, matched_gt_boxes.tensor
+                    anchors.tensor,
+                    matched_gt_boxes.tensor
                 )
 
                 gt_classes_i = targets_per_image.gt_classes[gt_matched_idxs]
@@ -222,7 +223,7 @@ class RetinaNet(Detector):
                 gt_classes_i[anchor_labels == -1] = -1
             else:
                 gt_classes_i = torch.zeros_like(gt_matched_idxs) + self.num_classes
-                gt_anchors_reg_deltas_i = torch.zeros_like(anchors_per_image.tensor)
+                gt_anchors_reg_deltas_i = torch.zeros_like(anchors.tensor)
 
             gt_classes.append(gt_classes_i)
             gt_anchors_deltas.append(gt_anchors_reg_deltas_i)
@@ -230,20 +231,17 @@ class RetinaNet(Detector):
         return torch.stack(gt_classes), torch.stack(gt_anchors_deltas)
 
     def inference(self, box_cls, box_delta, anchors, image_sizes):
-        assert len(anchors) == len(image_sizes)
-
         results = []
         box_cls = [permute_to_N_HWA_K(x, self.num_classes) for x in box_cls]
         box_delta = [permute_to_N_HWA_K(x, 4) for x in box_delta]
 
-        for img_idx, anchors_per_image in enumerate(anchors):
-            image_size = image_sizes[img_idx]
+        for img_idx, image_size in enumerate(image_sizes):
             box_cls_per_image = [box_cls_per_level[img_idx] for box_cls_per_level in box_cls]
             box_reg_per_image = [box_reg_per_level[img_idx] for box_reg_per_level in box_delta]
             results_per_image = self.inference_single_image(
                 box_cls_per_image,
                 box_reg_per_image,
-                anchors_per_image,
+                anchors,
                 tuple(image_size)
             )
             results.append(results_per_image)

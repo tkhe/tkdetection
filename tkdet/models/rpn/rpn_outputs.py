@@ -150,9 +150,9 @@ class RPNOutputs(object):
     def _get_ground_truth(self):
         gt_objectness_logits = []
         gt_anchor_deltas = []
-        anchors = [Boxes.cat(anchors_i) for anchors_i in self.anchors]
-        for image_size_i, anchors_i, gt_boxes_i in zip(self.image_sizes, anchors, self.gt_boxes):
-            match_quality_matrix = retry_if_cuda_oom(pairwise_iou)(gt_boxes_i, anchors_i)
+        anchors = Boxes.cat(self.anchors)
+        for image_size_i, gt_boxes_i in zip(self.image_sizes, self.gt_boxes):
+            match_quality_matrix = retry_if_cuda_oom(pairwise_iou)(gt_boxes_i, anchors)
             matched_idxs, gt_objectness_logits_i = retry_if_cuda_oom(
                 self.anchor_matcher
             )(match_quality_matrix)
@@ -160,15 +160,15 @@ class RPNOutputs(object):
             del match_quality_matrix
 
             if self.boundary_threshold >= 0:
-                anchors_inside_image = anchors_i.inside_box(image_size_i, self.boundary_threshold)
+                anchors_inside_image = anchors.inside_box(image_size_i, self.boundary_threshold)
                 gt_objectness_logits_i[~anchors_inside_image] = -1
 
             if len(gt_boxes_i) == 0:
-                gt_anchor_deltas_i = torch.zeros_like(anchors_i.tensor)
+                gt_anchor_deltas_i = torch.zeros_like(anchors.tensor)
             else:
                 matched_gt_boxes = gt_boxes_i[matched_idxs]
                 gt_anchor_deltas_i = self.box2box_transform.get_deltas(
-                    anchors_i.tensor,
+                    anchors.tensor,
                     matched_gt_boxes.tensor
                 )
 
@@ -248,17 +248,14 @@ class RPNOutputs(object):
 
     def predict_proposals(self):
         proposals = []
-        anchors = list(zip(*self.anchors))
-        for anchors_i, pred_anchor_deltas_i in zip(anchors, self.pred_anchor_deltas):
-            B = anchors_i[0].tensor.size(1)
+        for anchors_i, pred_anchor_deltas_i in zip(self.anchors, self.pred_anchor_deltas):
+            B = anchors_i.tensor.size(1)
             N, _, Hi, Wi = pred_anchor_deltas_i.shape
             pred_anchor_deltas_i = (
                 pred_anchor_deltas_i.view(N, -1, B, Hi, Wi).permute(0, 3, 4, 1, 2).reshape(-1, B)
             )
-            anchors_i = type(anchors_i[0]).cat(anchors_i)
-            proposals_i = self.box2box_transform.apply_deltas(
-                pred_anchor_deltas_i, anchors_i.tensor
-            )
+            anchors_i = cat([anchors_i.tensor] * N, dim=0)
+            proposals_i = self.box2box_transform.apply_deltas(pred_anchor_deltas_i, anchors_i)
             proposals.append(proposals_i.view(N, -1, B))
         return proposals
 

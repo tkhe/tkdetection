@@ -1,4 +1,3 @@
-import copy
 import math
 from typing import List
 
@@ -134,14 +133,7 @@ class DefaultAnchorGenerator(nn.Module):
         return torch.tensor(anchors)
 
     def forward(self, features):
-        num_images = len(features[0])
         grid_sizes = [feature_map.shape[-2:] for feature_map in features]
         anchors_over_all_feature_maps = self._grid_anchors(grid_sizes)
 
-        anchors_in_image = []
-        for anchors_per_feature_map in anchors_over_all_feature_maps:
-            boxes = Boxes(anchors_per_feature_map)
-            anchors_in_image.append(boxes)
-
-        anchors = [copy.deepcopy(anchors_in_image) for _ in range(num_images)]
-        return anchors
+        return [Boxes(x) for x in anchors_over_all_feature_maps]

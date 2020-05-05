@@ -128,11 +128,19 @@ def collect_env_info():
         data.append(("torchvision", "unknown"))
 
     try:
+        import fvcore
+
+        data.append(("fvcore", fvcore.__version__))
+    except ImportError:
+        pass
+
+    try:
         import cv2
 
         data.append(("cv2", cv2.__version__))
     except ImportError:
         pass
+
     env_str = tabulate(data) + "\n"
     env_str += collect_torch_env()
     return env_str
