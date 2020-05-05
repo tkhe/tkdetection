@@ -430,7 +430,7 @@ namespace tkdet {
         int h_stride = grad.stride(2);
         int w_stride = grad.stride(3);
 
-        auto rois_ = rois.contiguous()
+        auto rois_ = rois.contiguous();
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(grad.type(), "ROIAlign_forward", [&] {
             ROIAlignBackward<scalar_t>(
                 grad.numel(),
