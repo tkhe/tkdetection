@@ -64,6 +64,11 @@ class TensorboardXWriter(EventWriter):
                 self._writer.add_image(img_name, img, step_num)
             storage.clear_images()
 
+        if len(storage.hist_data) >= 1:
+            for params in storage.hist_data:
+                self._writer.add_histogram_raw(**params)
+            storage.clear_histograms()
+
     def close(self):
         if hasattr(self, "_writer"):
             self._writer.close()
@@ -137,6 +142,7 @@ class EventStorage(object):
         self._iter = start_iter
         self._current_prefix = ""
         self._vis_data = []
+        self._histograms = []
 
     def put_image(self, img_name, img_tensor):
         self._vis_data.append((img_name, img_tensor, self._iter))
@@ -161,6 +167,28 @@ class EventStorage(object):
     def put_scalars(self, *, smoothing_hint=True, **kwargs):
         for k, v in kwargs.items():
             self.put_scalar(k, v, smoothing_hint=smoothing_hint)
+
+    def put_histogram(self, hist_name, hist_tensor, bins=1000):
+        ht_min, ht_max = hist_tensor.min().item(), hist_tensor.max().item()
+
+        hist_counts = torch.histc(hist_tensor, bins=bins)
+        hist_edges = torch.linspace(start=ht_min, end=ht_max, steps=bins + 1, dtype=torch.float32)
+
+        hist_params = dict(
+            tag=hist_name,
+            min=ht_min,
+            max=ht_max,
+            num=len(hist_tensor),
+            sum=float(hist_tensor.sum()),
+            sum_squares=float(torch.sum(hist_tensor ** 2)),
+            bucket_limits=hist_edges[1:].tolist(),
+            bucket_counts=hist_counts.tolist(),
+            global_step=self._iter,
+        )
+        self._histograms.append(hist_params)
+
+    def clear_histograms(self):
+        self._histograms = []
 
     def history(self, name):
         ret = self._history.get(name, None)
@@ -190,6 +218,10 @@ class EventStorage(object):
     @property
     def vis_data(self):
         return self._vis_data
+
+    @property
+    def hist_data(self):
+        return self._histograms
 
     @property
     def iter(self):
