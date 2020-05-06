@@ -3,6 +3,7 @@ import pprint
 import sys
 from abc import ABC
 
+import cv2
 import numpy as np
 from PIL import Image
 from fvcore.transforms.transform import BlendTransform
@@ -13,7 +14,10 @@ from fvcore.transforms.transform import Transform
 from fvcore.transforms.transform import TransformList
 from fvcore.transforms.transform import VFlipTransform
 
-from .transform import ExtentTransform, ResizeTransform, RotationTransform
+from .transform import ExtentTransform
+from .transform import ResizeTransform
+from .transform import ResizeWithPaddingTransform
+from .transform import RotationTransform
 
 __all__ = [
     "RandomApply",
@@ -27,6 +31,7 @@ __all__ = [
     "RandomRotation",
     "Resize",
     "ResizeShortestEdge",
+    "ResizeWithPadding",
     "TransformGen",
     "apply_transform_gens",
 ]
@@ -182,6 +187,25 @@ class ResizeShortestEdge(TransformGen):
         neww = int(neww + 0.5)
         newh = int(newh + 0.5)
         return ResizeTransform(h, w, newh, neww, self.interp)
+
+
+class ResizeWithPadding(TransformGen):
+    def __init__(self, shape, interp=cv2.INTER_LINEAR):
+        super().__init__()
+
+        if isinstance(shape, int):
+            shape = (shape, shape)
+        shape = tuple(shape)
+
+        self._init(locals())
+
+    def get_transform(self, img):
+        return ResizeWithPaddingTransform(
+            img.shape[0],
+            img.shape[1],
+            self.shape,
+            self.interp
+        )
 
 
 class RandomRotation(TransformGen):

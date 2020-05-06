@@ -300,3 +300,19 @@ def build_resize_transform(cfg, is_train):
         tfm_gens.append(T.RandomFlip())
         logger.info("TransformGens used in training: " + str(tfm_gens))
     return tfm_gens
+
+
+@TRANSFORM_REGISTRY.register("ResizeWithPaddingTransform")
+def build_resize_with_padding_transform(cfg, is_train):
+    if is_train:
+        size = cfg.INPUT.MAX_SIZE_TRAIN
+    else:
+        size = cfg.INPUT.MAX_SIZE_TEST
+
+    logger = logging.getLogger(__name__)
+    tfm_gens = []
+    tfm_gens.append(T.ResizeWithPadding(size))
+    if is_train:
+        tfm_gens.append(T.RandomFlip())
+        logger.info("TransformGens used in training: " + str(tfm_gens))
+    return tfm_gens

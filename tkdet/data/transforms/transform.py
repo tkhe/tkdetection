@@ -9,7 +9,12 @@ try:
 except ImportError:
     pass
 
-__all__ = ["ExtentTransform", "ResizeTransform", "RotationTransform"]
+__all__ = [
+    "ExtentTransform",
+    "ResizeTransform",
+    "ResizeWithPaddingTransform",
+    "RotationTransform",
+]
 
 
 class ExtentTransform(Transform):
@@ -68,6 +73,43 @@ class ResizeTransform(Transform):
     def apply_segmentation(self, segmentation):
         segmentation = self.apply_image(segmentation, interp=Image.NEAREST)
         return segmentation
+
+
+class ResizeWithPaddingTransform(Transform):
+    def __init__(self, h, w, size, interplotion, value=None):
+        super().__init__()
+
+        if value is None:
+            value = [124, 116, 104]
+
+        self._set_attributes(locals())
+
+    def apply_image(self, img, interplotion=None):
+        h, w = img.shape[:2]
+        if h > w:
+            new_h = self.size
+            new_w = int(self.size / h * w + 0.5)
+            right = self.size - new_w
+            bottom = 0
+        else:
+            new_h = int(self.size / w * h + 0.5)
+            new_w = self.size
+            right = 0
+            bottom = self.size - new_h
+
+        interplotion_method = interplotion if interplotion is not None else self.interplotion
+        img = cv2.resize(img, (new_w, new_h), interpolation=interplotion_method)
+        img = cv2.copyMakeBorder(img, 0, bottom, 0, right, cv2.BORDER_CONSTANT, value=self.value)
+        return img
+
+    def apply_coords(self, coords):
+        scale = self.size / max(self.h, self.w)
+        coords[:, 0] = coords[:, 0] * scale
+        coords[:, 1] = coords[:, 1] * scale
+        return coords
+
+    def apply_segmentation(self, segmentation):
+        raise NotImplementedError
 
 
 class RotationTransform(Transform):
