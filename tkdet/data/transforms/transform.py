@@ -86,16 +86,17 @@ class ResizeWithPaddingTransform(Transform):
 
     def apply_image(self, img, interplotion=None):
         h, w = img.shape[:2]
+        size = self.size[0]
         if h > w:
-            new_h = self.size
-            new_w = int(self.size / h * w + 0.5)
-            right = self.size - new_w
+            new_h = size
+            new_w = int(size / h * w + 0.5)
+            right = size - new_w
             bottom = 0
         else:
-            new_h = int(self.size / w * h + 0.5)
-            new_w = self.size
+            new_h = int(size / w * h + 0.5)
+            new_w = size
             right = 0
-            bottom = self.size - new_h
+            bottom = size - new_h
 
         interplotion_method = interplotion if interplotion is not None else self.interplotion
         img = cv2.resize(img, (new_w, new_h), interpolation=interplotion_method)
@@ -103,7 +104,8 @@ class ResizeWithPaddingTransform(Transform):
         return img
 
     def apply_coords(self, coords):
-        scale = self.size / max(self.h, self.w)
+        size = self.size[0]
+        scale = size / max(self.h, self.w)
         coords[:, 0] = coords[:, 0] * scale
         coords[:, 1] = coords[:, 1] * scale
         return coords
