@@ -147,8 +147,8 @@ class MaskRCNNConvUpsampleHead(BaseMaskRCNNHead):
                 stride=1,
                 padding=1,
                 bias=not conv_norm,
-                norm=get_norm(conv_norm, conv_dim),
-                activation=F.relu,
+                norm=conv_norm,
+                activation="relu",
             )
             self.add_module("mask_fcn{}".format(k + 1), conv)
             self.conv_norm_relus.append(conv)
@@ -167,9 +167,9 @@ class MaskRCNNConvUpsampleHead(BaseMaskRCNNHead):
 
         weight_init.c2_msra_fill(self.deconv)
 
-        nn.init.normal_(self.predictor.weight, std=0.001)
-        if self.predictor.bias is not None:
-            nn.init.constant_(self.predictor.bias, 0)
+        nn.init.normal_(self.predictor.conv.weight, std=0.001)
+        if self.predictor.conv.bias is not None:
+            nn.init.constant_(self.predictor.conv.bias, 0)
 
     @classmethod
     def from_config(cls, cfg, input_shape):
@@ -184,7 +184,7 @@ class MaskRCNNConvUpsampleHead(BaseMaskRCNNHead):
         if cfg.MODEL.ROI_MASK_HEAD.CLS_AGNOSTIC_MASK:
             ret["num_classes"] = 1
         else:
-            ret["num_classes"] = cfg.MODEL.ROI_HEADS.NUM_CLASSES
+            ret["num_classes"] = cfg.MODEL.NUM_CLASSES
         return ret
 
     def layers(self, x):
