@@ -17,4 +17,4 @@ SOLVER:
   CHECKPOINT_PERIOD: 300
 TEST:
   EVAL_PERIOD: 300
-OUTPUT_DIR: "output/pointrend/pointrend_resnet_18_fpn_3x"
+OUTPUT_DIR: "output/pointrend/point_rend_resnet_18_fpn_3x"
