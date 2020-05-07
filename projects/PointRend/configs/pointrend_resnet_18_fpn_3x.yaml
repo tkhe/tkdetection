@@ -1,0 +1,20 @@
+_BASE_: Base-PointRend-RCNN-FPN.yaml
+MODEL:
+  NUM_CLASSES: 3
+  WEIGHTS: "torchvision://ResNet-18"
+  MASK_ON: true
+  BACKBONE:
+    NAME: "ResNet-18"
+DATASETS:
+  TRAIN: ("fruits_nuts", )
+  TEST: ("fruits_nuts", )
+SOLVER:
+  IMS_PER_BATCH: 2
+  BASE_LR: 0.001
+  MAX_ITER: 300
+  STEPS: (200, 250)
+  WARMUP_ITERS: 1
+  CHECKPOINT_PERIOD: 300
+TEST:
+  EVAL_PERIOD: 300
+OUTPUT_DIR: "output/pointrend/pointrend_resnet_18_fpn_3x"
