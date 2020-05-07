@@ -7,6 +7,7 @@ from .cityscapes import load_cityscapes_instances
 from .cityscapes import load_cityscapes_semantic
 from .coco import register_coco_instances
 from .coco import register_coco_panoptic_separated
+from .fruits_nuts import register_fruits_nuts_instances
 from .lvis import get_lvis_instances_meta
 from .lvis import register_lvis_instances
 from .pascal_voc import register_pascal_voc
@@ -200,8 +201,19 @@ def register_all_visdrone(root):
         MetadataCatalog.get(name).evaluator_type = "coco"
 
 
+def register_all_fruits_nuts(root):
+    register_fruits_nuts_instances(
+        "fruits_nuts",
+        {},
+        os.path.join(root, "fruits_nuts/trainval.json"),
+        os.path.join(root, "fruits_nuts/images")
+    )
+    MetadataCatalog.get("fruits_nuts").evaluator_type = "coco"
+
+
 _root = os.getenv("TKDET_DATASETS", "datasets")
 register_all_coco(_root)
+register_all_fruits_nuts(_root)
 register_all_lvis(_root)
 register_all_cityscapes(_root)
 register_all_pascal_voc(_root)
