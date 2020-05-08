@@ -10,11 +10,11 @@ supported object detection algorithms and backbones are shown below.
 
 supported:
 
-+ [Faster R-CNN](https://arxiv.org/abs/1506.01497)
-+ [Mask R-CNN](https://arxiv.org/abs/1703.06870)
-+ [RetinaNet](https://arxiv.org/abs/1708.02002)
-+ [FCOS](https://arxiv.org/abs/1904.01355)
-+ [PointRend](https://arxiv.org/abs/1912.08193)
++ [x] [Faster R-CNN](https://arxiv.org/abs/1506.01497)
++ [x] [Mask R-CNN](https://arxiv.org/abs/1703.06870)
++ [x] [RetinaNet](https://arxiv.org/abs/1708.02002)
++ [x] [FCOS](https://arxiv.org/abs/1904.01355)
++ [x] [PointRend](https://arxiv.org/abs/1912.08193)
 
 more algorithms are comming soon.
 
@@ -29,11 +29,11 @@ more algorithms are comming soon.
 
 supported:
 
-+ [ResNet](https://arxiv.org/abs/1512.03385) and [ResNeXt](https://arxiv.org/abs/1611.05431)
-+ [MobileNet v2](https://arxiv.org/abs/1801.04381)
-+ [ShuffleNet v2](https://arxiv.org/abs/1807.11164)
-+ [EfficientNet](https://arxiv.org/abs/1905.11946)
-+ [DarkNet53](https://arxiv.org/abs/1804.02767)
++ [x] [ResNet](https://arxiv.org/abs/1512.03385) and [ResNeXt](https://arxiv.org/abs/1611.05431)
++ [x] [MobileNet v2](https://arxiv.org/abs/1801.04381)
++ [x] [ShuffleNet v2](https://arxiv.org/abs/1807.11164)
++ [x] [EfficientNet](https://arxiv.org/abs/1905.11946)
++ [x] [DarkNet53](https://arxiv.org/abs/1804.02767)
 
 more backbones are comming soon.
 
