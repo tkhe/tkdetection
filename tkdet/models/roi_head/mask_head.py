@@ -3,13 +3,13 @@ from typing import List
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from fvcore.nn import weight_init
 
 from tkdet.config import configurable
 from tkdet.layers import Conv2d
 from tkdet.layers import ShapeSpec
 from tkdet.layers import cat
 from tkdet.structures import Instances
+from tkdet.utils import weight_init
 from tkdet.utils.events import get_event_storage
 from tkdet.utils.registry import Registry
 

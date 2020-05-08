@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from fvcore.nn import weight_init
 
 from tkdet.layers import Block
 from tkdet.layers import FrozenBatchNorm2d
 from tkdet.layers import get_norm
+from tkdet.utils import weight_init
 from .base import Backbone
 from .build import BACKBONE_REGISTRY
 

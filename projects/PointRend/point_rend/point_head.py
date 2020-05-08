@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from fvcore.nn import weight_init
 
 from tkdet.layers import ShapeSpec
 from tkdet.layers import cat
 from tkdet.structures import BitMasks
+from tkdet.utils import weight_init
 from tkdet.utils.events import get_event_storage
 from tkdet.utils.registry import Registry
 from .point_features import point_sample

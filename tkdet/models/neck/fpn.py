@@ -2,9 +2,9 @@ import math
 
 import torch.nn as nn
 import torch.nn.functional as F
-from fvcore.nn import weight_init
 
 from tkdet.layers import Conv2d
+from tkdet.utils import weight_init
 from tkdet.utils.registry import Registry
 from .base import Neck
 from .build import NECK_REGISTRY

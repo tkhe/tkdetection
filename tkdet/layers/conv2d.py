@@ -1,5 +1,4 @@
 import torch.nn as nn
-from fvcore.nn import weight_init
 
 from .activation import get_activation
 from .batch_norm import get_norm
@@ -20,7 +19,6 @@ class Conv2d(nn.Module):
         bias=True,
         norm="",
         activation="",
-        init_method=None,
         **kwargs
     ):
         super().__init__()
@@ -42,10 +40,9 @@ class Conv2d(nn.Module):
         inplace = kwargs.get("inplace", True)
         self.activation = get_activation(activation, inplace)
 
-        if init_method is None:
-            weight_init.c2_msra_fill(self.conv)
-        else:
-            init_method(self.conv)
+        nn.init.kaiming_normal_(self.conv.weight, mode="fan_out", nonlinearity="relu")
+        if self.conv.bias is not None:
+            nn.init.constant_(self.conv.bias, 0)
 
     def forward(self, x):
         x = self.conv(x)

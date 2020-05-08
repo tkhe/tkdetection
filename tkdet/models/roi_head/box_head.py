@@ -4,11 +4,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from fvcore.nn import weight_init
 
 from tkdet.config import configurable
 from tkdet.layers import Conv2d
 from tkdet.layers import ShapeSpec
+from tkdet.utils import weight_init
 from tkdet.utils.registry import Registry
 
 __all__ = ["BOX_HEAD_REGISTRY", "build_box_head"]

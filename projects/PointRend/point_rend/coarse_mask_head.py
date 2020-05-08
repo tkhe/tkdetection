@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from fvcore.nn import weight_init
 
 from tkdet.layers import Conv2d
 from tkdet.layers import ShapeSpec
 from tkdet.models.roi_head.mask_head import MASK_HEAD_REGISTRY
+from tkdet.utils import weight_init
 
 __all__ = ["CoarseMaskHead"]
 
@@ -62,7 +62,7 @@ class CoarseMaskHead(nn.Module):
         nn.init.constant_(self.prediction.bias, 0)
 
         for layer in self.conv_layers:
-            weight_init.c2_msra_fill(layer.conv)
+            weight_init.c2_msra_fill(layer)
         for layer in self.fcs:
             weight_init.c2_xavier_fill(layer)
 

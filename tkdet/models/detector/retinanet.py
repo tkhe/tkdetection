@@ -4,7 +4,6 @@ from typing import List
 import numpy as np
 import torch
 import torch.nn as nn
-from fvcore.nn import weight_init
 
 from tkdet.layers import ShapeSpec
 from tkdet.layers import batched_nms
@@ -328,7 +327,7 @@ class RetinaNetHead(nn.Module):
                     nn.init.constant_(layer.bias, 0)
 
         bias_value = -(math.log((1 - prior_prob) / prior_prob))
-        torch.nn.init.constant_(self.cls_score.bias, bias_value)
+        nn.init.constant_(self.cls_score.bias, bias_value)
 
     def forward(self, features):
         logits = []
