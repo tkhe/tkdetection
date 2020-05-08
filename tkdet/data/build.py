@@ -245,7 +245,9 @@ def build_detection_train_loader(cfg, mapper=None):
         data_loader = AspectRatioGroupedDataset(data_loader, images_per_worker)
     else:
         batch_sampler = torch.utils.data.sampler.BatchSampler(
-            sampler, images_per_worker, drop_last=True
+            sampler,
+            images_per_worker,
+            drop_last=True
         )
         data_loader = torch.utils.data.DataLoader(
             dataset,
