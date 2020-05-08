@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+import torch.nn.functional as F
 from fvcore.transforms.transform import HFlipTransform
 from fvcore.transforms.transform import NoOpTransform
 from fvcore.transforms.transform import Transform
@@ -59,10 +61,26 @@ class ResizeTransform(Transform):
 
     def apply_image(self, img, interp=None):
         assert img.shape[:2] == (self.h, self.w)
-        pil_image = Image.fromarray(img)
-        interp_method = interp if interp is not None else self.interp
-        pil_image = pil_image.resize((self.new_w, self.new_h), interp_method)
-        ret = np.asarray(pil_image)
+        assert len(img.shape) <= 4
+
+        if img.dtype == np.uint8:
+            pil_image = Image.fromarray(img)
+            interp_method = interp if interp is not None else self.interp
+            pil_image = pil_image.resize((self.new_w, self.new_h), interp_method)
+            ret = np.asarray(pil_image)
+        else:
+            img = torch.from_numpy(img)
+            shape = list(img.shape)
+            shape_4d = shape[:2] + [1] * (4 - len(shape)) + shape[2:]
+            img = img.view(shape_4d).permute(2, 3, 0, 1)
+            _PIL_RESIZE_TO_INTERPOLATE_MODE = {
+                Image.BILINEAR: "bilinear",
+                Image.BICUBIC: "bicubic"
+            }
+            mode = _PIL_RESIZE_TO_INTERPOLATE_MODE[self.interp]
+            img = F.interpolate(img, (self.new_h, self.new_w), mode=mode, align_corners=False)
+            shape[:2] = (self.new_h, self.new_w)
+            ret = img.permute(2, 3, 0, 1).view(shape).numpy()
         return ret
 
     def apply_coords(self, coords):
