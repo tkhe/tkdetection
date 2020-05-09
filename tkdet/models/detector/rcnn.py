@@ -20,7 +20,7 @@ __all__ = ["GeneralizedRCNN"]
 @DETECTOR_REGISTRY.register()
 class GeneralizedRCNN(Detector):
     def __init__(self, cfg):
-        super().__init__()
+        super().__init__(cfg)
 
         self.backbone = build_backbone(cfg)
         self.neck = build_neck(cfg, self.backbone.output_shape())
@@ -32,15 +32,6 @@ class GeneralizedRCNN(Detector):
         self.roi_heads = build_roi_heads(cfg, output_shape)
         self.vis_period = cfg.VIS_PERIOD
         self.input_format = cfg.INPUT.FORMAT
-
-        assert len(cfg.INPUT.PIXEL_MEAN) == len(cfg.INPUT.PIXEL_STD)
-
-        self.register_buffer("pixel_mean", torch.Tensor(cfg.INPUT.PIXEL_MEAN).view(-1, 1, 1))
-        self.register_buffer("pixel_std", torch.Tensor(cfg.INPUT.PIXEL_STD).view(-1, 1, 1))
-
-    @property
-    def device(self):
-        return self.pixel_mean.device
 
     def visualize_training(self, batched_inputs, proposals):
         from tkdet.utils.visualizer import Visualizer

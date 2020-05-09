@@ -111,7 +111,7 @@ class FCOS(Detector):
     """
 
     def __init__(self, cfg):
-        super().__init__()
+        super().__init__(cfg)
 
         self.backbone = build_backbone(cfg)
         self.neck = build_neck(cfg, self.backbone.output_shape())
@@ -127,13 +127,6 @@ class FCOS(Detector):
         self.norm_reg_targets = cfg.FCOS.NORM_REG_TARGETS
         self.topk_candidates = cfg.FCOS.TOPK_CANDIDATES
         self.max_detections_per_image = cfg.TEST.DETECTIONS_PER_IMAGE
-
-        self.register_buffer("pixel_mean", torch.Tensor(cfg.INPUT.PIXEL_MEAN).view(-1, 1, 1))
-        self.register_buffer("pixel_std", torch.Tensor(cfg.INPUT.PIXEL_STD).view(-1, 1, 1))
-
-    @property
-    def device(self):
-        return self.pixel_mean.device
 
     def forward(self, batched_inputs):
         images = self.preprocess_inputs(batched_inputs)

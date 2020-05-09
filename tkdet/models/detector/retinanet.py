@@ -53,7 +53,7 @@ class RetinaNet(Detector):
     """
 
     def __init__(self, cfg):
-        super().__init__()
+        super().__init__(cfg)
 
         self.num_classes = cfg.MODEL.NUM_CLASSES
 
@@ -83,13 +83,6 @@ class RetinaNet(Detector):
             cfg.RETINANET.IOU_LABELS,
             allow_low_quality_matches=True
         )
-
-        self.register_buffer("pixel_mean", torch.Tensor(cfg.INPUT.PIXEL_MEAN).view(-1, 1, 1))
-        self.register_buffer("pixel_std", torch.Tensor(cfg.INPUT.PIXEL_STD).view(-1, 1, 1))
-
-    @property
-    def device(self):
-        return self.pixel_mean.device
 
     def visualize_training(self, batched_inputs, results):
         from tkdet.utils.visualizer import Visualizer
