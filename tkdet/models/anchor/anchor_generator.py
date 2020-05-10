@@ -3,13 +3,14 @@ from typing import List
 
 import torch
 import torch.nn as nn
+from torch.nn.modules.utils import _pair
 
 from tkdet.config import configurable
 from tkdet.layers import ShapeSpec
 from tkdet.structures import Boxes
 from .build import ANCHOR_REGISTRY
 
-__all__ = ["DefaultAnchorGenerator"]
+__all__ = ["DefaultAnchorGenerator", "SSDAnchorGenerator"]
 
 
 class BufferList(nn.Module):
@@ -130,6 +131,71 @@ class DefaultAnchorGenerator(nn.Module):
                 h = aspect_ratio * w
                 x0, y0, x1, y1 = -w / 2.0, -h / 2.0, w / 2.0, h / 2.0
                 anchors.append([x0, y0, x1, y1])
+        return torch.tensor(anchors)
+
+    def forward(self, features):
+        grid_sizes = [feature_map.shape[-2:] for feature_map in features]
+        anchors_over_all_feature_maps = self._grid_anchors(grid_sizes)
+
+        return [Boxes(x) for x in anchors_over_all_feature_maps]
+
+
+@ANCHOR_REGISTRY.register()
+class SSDAnchorGenerator(nn.Module):
+    def __init__(self, cfg, input_shape: List[ShapeSpec]):
+        super().__init__()
+
+        self.strides = cfg.SSD.STRIDES
+        sizes = cfg.MODEL.ANCHOR.SIZES
+        self.min_sizes = sizes[:-1]
+        self.max_sizes = sizes[1:]
+        self.aspect_ratios = cfg.MODEL.ANCHOR.ASPECT_RATIOS
+        self.offset = cfg.MODEL.ANCHOR.OFFSET
+
+        self.cell_anchors = self._calculate_anchors(
+            self.min_sizes,
+            self.max_sizes,
+            self.aspect_ratios
+        )
+
+    @property
+    def num_cell_anchors(self):
+        return [len(cell_anchors) for cell_anchors in self.cell_anchors]
+
+    def _grid_anchors(self, grid_sizes: List[List[int]]):
+        anchors = []
+        for size, stride, base_anchors in zip(grid_sizes, self.strides, self.cell_anchors):
+            shift_x, shift_y = _create_grid_offsets(size, stride, self.offset, base_anchors.device)
+            shifts = torch.stack((shift_x, shift_y, shift_x, shift_y), dim=1)
+
+            anchors.append((shifts.view(-1, 1, 4) + base_anchors.view(1, -1, 4)).reshape(-1, 4))
+
+        return anchors
+
+    def _calculate_anchors(self, min_sizes, max_sizes, aspect_ratios):
+        cell_anchors = [
+            self.generate_cell_anchors(min_size, max_size, a)
+            for min_size, max_size, a in zip(min_sizes, max_sizes, aspect_ratios)
+        ]
+        return BufferList(cell_anchors)
+
+    def generate_cell_anchors(self, min_size, max_size, aspect_ratios):
+        anchors = []
+        ratios = [1]
+        for r in aspect_ratios:
+            ratios += [r, 1 / r]
+
+        base_size = min_size
+        for r in ratios:
+            w = base_size * math.sqrt(r)
+            h = base_size / math.sqrt(r)
+            x0, y0, x1, y1 = - w / 2.0, - h / 2.0, w / 2.0, h / 2.0
+            anchors.append([x0, y0, x1, y1])
+
+        base_size = math.sqrt(min_size * max_size)
+        w = h = base_size
+        x0, y0, x1, y1 = - w / 2.0, - h / 2.0, w / 2.0, h / 2.0
+        anchors.insert(1, [x0, y0, x1, y1])
         return torch.tensor(anchors)
 
     def forward(self, features):

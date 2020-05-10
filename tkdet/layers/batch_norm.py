@@ -2,7 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ["get_norm", "FrozenBatchNorm2d"]
+__all__ = [
+    "FrozenBatchNorm2d",
+    "L2Norm",
+    "get_norm",
+]
 
 
 class FrozenBatchNorm2d(nn.Module):
@@ -91,6 +95,20 @@ class FrozenBatchNorm2d(nn.Module):
                 if new_child is not child:
                     res.add_module(name, new_child)
         return res
+
+
+class L2Norm(nn.Module):
+    def __init__(self, n_dims, scale=20.0, eps=1e-10):
+        super().__init__()
+
+        self.n_dims = n_dims
+        self.weight = nn.Parameter(torch.Tensor(self.n_dims))
+        self.eps = eps
+        self.scale = scale
+
+    def forward(self, x):
+        norm = x.pow(2).sum(1, keepdim=True).sqrt() + self.eps
+        return self.weight[None, :, None, None].float().expand_as(x_float) * x / norm
 
 
 def get_norm(norm, out_channels, **kwargs):

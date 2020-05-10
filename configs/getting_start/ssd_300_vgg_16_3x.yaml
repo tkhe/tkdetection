@@ -1,0 +1,16 @@
+_BASE_: "../Base-SSD.yaml"
+MODEL:
+  NUM_CLASSES: 3
+DATASETS:
+  TRAIN: ("fruits_nuts",)
+  TEST: ("fruits_nuts",)
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.001
+  MAX_ITER: 3000
+  STEPS: (2000, 2500)
+  WARMUP_ITERS: 1
+  CHECKPOINT_PERIOD: 3000
+TEST:
+  EVAL_PERIOD: 3000
+OUTPUT_DIR: "output/getting_start/ssd_300_vgg_16_3x"
