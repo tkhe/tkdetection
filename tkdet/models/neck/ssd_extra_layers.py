@@ -67,16 +67,17 @@ class VGGExtraLayers(Neck):
         return -1
 
     def forward(self, x):
-        outputs = x
+        results = [x[f] for f in x]
 
-        x = [x[f] for f in x]
-        out = x[-1]
+        results[0] = self.l2_norm(results[0])
+
+        out = results[-1]
 
         for stage in self._out_features[2:]:
             out = getattr(self, stage)(out)
-            outputs[stage] = out
+            results.append(out)
 
-        return outputs
+        return dict(zip(self._out_features, results))
 
 
 @NECK_REGISTRY.register("VGGExtraLayers")

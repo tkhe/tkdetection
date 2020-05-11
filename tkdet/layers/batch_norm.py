@@ -104,11 +104,13 @@ class L2Norm(nn.Module):
         self.n_dims = n_dims
         self.weight = nn.Parameter(torch.Tensor(self.n_dims))
         self.eps = eps
-        self.scale = scale
+
+        nn.init.constant_(self.weight, scale)
 
     def forward(self, x):
-        norm = x.pow(2).sum(1, keepdim=True).sqrt() + self.eps
-        return self.weight[None, :, None, None].float().expand_as(x_float) * x / norm
+        x_float = x.float()
+        norm = x_float.pow(2).sum(1, keepdim=True).sqrt() + self.eps
+        return (self.weight[None, :, None, None].float().expand_as(x_float) * x_float / norm).type_as(x)
 
 
 def get_norm(norm, out_channels, **kwargs):

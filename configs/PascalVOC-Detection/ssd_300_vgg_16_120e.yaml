@@ -1,0 +1,16 @@
+_BASE_: "../Base-SSD.yaml"
+MODEL:
+  NUM_CLASSES: 20
+DATASETS:
+  TRAIN: ("voc_2007_trainval", "voc_2012_trainval")
+  TEST: ("voc_2007_test",)
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.001
+  STEPS: (80000, 100000)
+  MAX_ITER: 120000
+  WARMUP_ITERS: 500
+  CHECKPOINT_PERIOD: 5000
+TEST:
+  EVAL_PERIOD: 5000
+OUTPUT_DIR: "output/pascal_voc/ssd_300_vgg_16_120e"

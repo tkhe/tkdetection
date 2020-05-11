@@ -46,7 +46,7 @@ class DetectionCheckpointer(Checkpointer):
                     incompatible.missing_keys.remove(k)
                 except ValueError:
                     pass
-
+        return incompatible
 
 def _align_models_prefix(state_dict):
     loaded_keys = sorted(state_dict.keys())

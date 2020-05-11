@@ -67,7 +67,8 @@ vgg_cfg = {
 
 def _vgg(cfg, vgg_type):
     out_features = cfg.MODEL.BACKBONE.OUT_FEATURES
-    return VGG(vgg_cfg[vgg_type], norm="", out_features=out_features)
+    norm = cfg.VGG.NORM
+    return VGG(vgg_cfg[vgg_type], norm=norm, out_features=out_features)
 
 
 @BACKBONE_REGISTRY.register("VGG-16")

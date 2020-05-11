@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from tkdet.layers import ShapeSpec
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
+from tkdet.layers import smooth_l1_loss
 from tkdet.models.anchor import build_anchor_generator
 from tkdet.models.backbone import build_backbone
 from tkdet.models.box_regression import Box2BoxTransform
@@ -68,7 +69,6 @@ class SSD(Detector):
             allow_low_quality_matches=True
         )
 
-
     def forward(self, batched_inputs):
         images = self.preprocess_inputs(batched_inputs)
 
@@ -86,6 +86,7 @@ class SSD(Detector):
             
             gt_classes, gt_anchors_reg_deltas = self.get_ground_truth(anchors, gt_instances)
             losses = self.losses(gt_classes, gt_anchors_reg_deltas, box_cls, box_delta)
+            return losses
         else:
             results = self.inference(box_cls, box_delta, anchors, images.image_sizes)
             processed_results = []
