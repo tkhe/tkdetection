@@ -342,3 +342,18 @@ def build_resize_with_padding_transform(cfg, is_train):
         tfm_gens.append(T.RandomFlip())
         logger.info("TransformGens used in training: " + str(tfm_gens))
     return tfm_gens
+
+
+@TRANSFORM_REGISTRY.register("SSDTransform")
+def build_ssd_transform(cfg, is_train):
+    tfm_gens = []
+
+    if is_train:
+        size = cfg.INPUT.MAX_SIZE_TRAIN
+        tfm_gens.append(T.PhotoMetricDistortion())
+        tfm_gens.append(T.Expand())
+        tfm_gens.append(T.RandomFlip())
+    else:
+        size = cfg.INPUT.MAX_SIZE_TEST
+    tfm_gens.append(T.Resize(size))
+    return tfm_gens

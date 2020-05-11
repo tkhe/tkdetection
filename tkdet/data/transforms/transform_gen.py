@@ -14,12 +14,16 @@ from fvcore.transforms.transform import Transform
 from fvcore.transforms.transform import TransformList
 from fvcore.transforms.transform import VFlipTransform
 
+from .transform import ExpandTransform
 from .transform import ExtentTransform
+from .transform import PhotoMetricDistortionTransform
 from .transform import ResizeTransform
 from .transform import ResizeWithPaddingTransform
 from .transform import RotationTransform
 
 __all__ = [
+    "Expand",
+    "PhotoMetricDistortion",
     "RandomApply",
     "RandomBrightness",
     "RandomContrast",
@@ -301,7 +305,6 @@ class RandomExtent(TransformGen):
 
 class RandomContrast(TransformGen):
     def __init__(self, intensity_min, intensity_max):
-
         super().__init__()
 
         self._init(locals())
@@ -330,6 +333,7 @@ class RandomSaturation(TransformGen):
 
     def get_transform(self, img):
         assert img.shape[-1] == 3, "Saturation only works on RGB images"
+
         w = np.random.uniform(self.intensity_min, self.intensity_max)
         grayscale = img.dot([0.299, 0.587, 0.114])[:, :, np.newaxis]
         return BlendTransform(src_image=grayscale, src_weight=1 - w, dst_weight=w)
@@ -357,6 +361,22 @@ class RandomLighting(TransformGen):
             src_weight=1.0,
             dst_weight=1.0
         )
+
+
+class PhotoMetricDistortion(TransformGen):
+    def __init__(self):
+        super().__init__()
+
+    def get_transform(self, img):
+        return PhotoMetricDistortionTransform()
+
+
+class Expand(TransformGen):
+    def __init__(self):
+        super().__init__()
+
+    def get_transform(self, img):
+        return ExpandTransform()
 
 
 def apply_transform_gens(transform_gens, img):

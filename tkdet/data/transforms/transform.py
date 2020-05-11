@@ -12,7 +12,9 @@ except ImportError:
     pass
 
 __all__ = [
+    "ExpandTransform",
     "ExtentTransform",
+    "PhotoMetricDistortionTransform",
     "ResizeTransform",
     "ResizeWithPaddingTransform",
     "RotationTransform",
@@ -178,3 +180,105 @@ class RotationTransform(Transform):
             new_center = np.array([self.bound_w / 2, self.bound_h / 2]) + offset - rot_im_center
             rm[:, 2] += new_center
         return rm
+
+
+class PhotoMetricDistortionTransform(Transform):
+    def __init__(
+        self,
+        brightness_delta=32,
+        contrast_low=0.5,
+        contrast_high=1.5,
+        saturation_low=0.5,
+        saturation_high=1.5,
+        hue_delta=18,
+    ):
+        super().__init__()
+
+        self._set_attributes(locals())
+
+    def apply_coords(self, coords):
+        return coords
+
+    def apply_segmentation(self, segmentation):
+        return segmentation
+
+    def apply_image(self, img, interp=None):
+        img = self.brightness(img)
+        if np.random.randint(2):
+            img = self.contrast(img)
+            img = self.saturation(img)
+            img = self.hue(img)
+        else:
+            img = self.saturation(img)
+            img = self.hue(img)
+            img = self.contrast(img)
+        return img
+
+    def convert(self, img, alpha=1, beta=0):
+        img = img.astype(np.float32) * alpha + beta
+        img = np.clip(img, 0, 255)
+        return img.astype(np.uint8)
+
+    def brightness(self, img):
+        if np.random.randint(2):
+            return self.convert(
+                img,
+                beta=np.random.uniform(-self.brightness_delta, self.brightness_delta)
+            )
+        return img
+
+    def contrast(self, img):
+        if np.random.randint(2):
+            return self.convert(img, alpha=np.random.uniform(self.contrast_low, self.contrast_high))
+        return img
+
+    def saturation(self, img):
+        if np.random.randint(2):
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            img[:, :, 1] = self.convert(
+                img[:, :, 1],
+                alpha=np.random.uniform(self.saturation_low, self.saturation_high)
+            )
+            return cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+        return img
+
+    def hue(self, img):
+        if np.random.randint(2):
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            img[:, :, 0] = (
+                img[:, :, 0].astype(int) + np.random.randint(-self.hue_delta, self.hue_delta)
+            ) % 180
+            return cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+        return img
+
+
+class ExpandTransform(Transform):
+    def __init__(self, min_ratio=1, max_ratio=4, mean=(123.675, 116.28, 103.53), prob=0.5):
+        super().__init__()
+
+        self._set_attributes(locals())
+
+        self.ratio = np.random.uniform(min_ratio, max_ratio)
+        self.left = 0
+        self.top = 0
+
+    def apply_coords(self, coords):
+        coords[:, 0] = coords[:, 0] + self.left
+        coords[:, 1] = coords[:, 1] + self.top
+        return coords
+
+    def apply_image(self, img, interp=None):
+        if np.random.uniform(0, 1) > self.prob:
+            return img
+
+        self.ratio = np.random.uniform(self.min_ratio, self.max_ratio)
+
+        h, w, c = img.shape
+        expand_img = np.full(
+            (int(h * self.ratio), int(w * self.ratio), c),
+            self.mean
+        ).astype(img.dtype)
+        self.left = int(np.random.uniform(0, w * self.ratio - w))
+        self.top = int(np.random.uniform(0, h * self.ratio - h))
+        expand_img[self.top:self.top + h, self.left:self.left + w] = img
+        return expand_img
