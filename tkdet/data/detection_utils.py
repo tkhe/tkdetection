@@ -346,6 +346,7 @@ def build_resize_with_padding_transform(cfg, is_train):
 
 @TRANSFORM_REGISTRY.register("SSDTransform")
 def build_ssd_transform(cfg, is_train):
+    logger = logging.getLogger(__name__)
     tfm_gens = []
 
     if is_train:
@@ -353,6 +354,7 @@ def build_ssd_transform(cfg, is_train):
         tfm_gens.append(T.PhotoMetricDistortion())
         tfm_gens.append(T.Expand())
         tfm_gens.append(T.RandomFlip())
+        logger.info("TransformGens used in training: " + str(tfm_gens))
     else:
         size = cfg.INPUT.MAX_SIZE_TEST
     tfm_gens.append(T.Resize(size))
