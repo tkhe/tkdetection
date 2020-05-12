@@ -1,7 +1,6 @@
-_BASE_: "../Base-SSD-Lite.yaml"
 MODEL:
   META_ARCHITECTURE: "SSD"
-  NUM_CLASSES: 20
+  NUM_CLASSES: 80
   WEIGHTS: "torchvision://MobileNet-V2-1.0"
   BACKBONE:
     NAME: "MobileNet-V2-1.0"
@@ -14,20 +13,23 @@ MODEL:
     ASPECT_RATIOS: [[2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
     OFFSET: 0.5
 SSD:
-  SIZE: 320
+  STRIDES: [16, 32, 64, 107, 160, 320]
   HEAD:
     NAME: "SSDLiteHead"
     NORM: "BN"
 DATASETS:
-  TRAIN: ("voc_2007_trainval", "voc_2012_trainval")
-  TEST: ("voc_2007_test",)
+  TRAIN: ("coco_2017_train",)
+  TEST: ("coco_2017_val",)
+INPUT:
+  FORMAT: "RGB"
+  TRANSFORM: "SSDTransform"
+  MAX_SIZE_TRAIN: 320
+  MAX_SIZE_TEST: 320
 SOLVER:
   IMS_PER_BATCH: 32
   BASE_LR: 0.001
-  STEPS: (80000, 100000)
-  MAX_ITER: 120000
-  WARMUP_ITERS: 500
+  MAX_ITER: 400000
+  STEPS: [280000, 360000]
   CHECKPOINT_PERIOD: 5000
 TEST:
   EVAL_PERIOD: 5000
-OUTPUT_DIR: "output/pascal_voc/ssd_lite_320_mobilenet_v2_1_0_240e"
