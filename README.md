@@ -15,15 +15,15 @@ supported:
 + [x] [RetinaNet](https://arxiv.org/abs/1708.02002)
 + [x] [FCOS](https://arxiv.org/abs/1904.01355)
 + [x] [PointRend](https://arxiv.org/abs/1912.08193)
++ [x] [SSD](https://arxiv.org/abs/1512.02325)
 
 more algorithms are comming soon.
 
-- [ ] [SSD](https://arxiv.org/abs/1512.02325)
-- [ ] [YOLOv3](https://arxiv.org/abs/1804.02767)
-- [ ] [EfficientDet](https://arxiv.org/abs/1911.09070)
-- [ ] [TensorMask](https://arxiv.org/abs/1903.12174)
-- [ ] [TridentNet](https://arxiv.org/abs/1901.01892)
-- [ ] [CenterMask](https://arxiv.org/abs/2004.04446)
++ [ ] [YOLOv3](https://arxiv.org/abs/1804.02767)
++ [ ] [EfficientDet](https://arxiv.org/abs/1911.09070)
++ [ ] [TensorMask](https://arxiv.org/abs/1903.12174)
++ [ ] [TridentNet](https://arxiv.org/abs/1901.01892)
++ [ ] [CenterMask](https://arxiv.org/abs/2004.04446)
 
 ### Backbone
 
@@ -37,9 +37,9 @@ supported:
 
 more backbones are comming soon.
 
-- [ ] [MobileNet v1](https://arxiv.org/abs/1704.04861)
-- [ ] [MobileNet v3](https://arxiv.org/abs/1905.02244)
-- [ ] [PeleeNet](https://arxiv.org/abs/1804.06882)
-- [ ] [DLA](https://arxiv.org/abs/1707.06484)
-- [ ] [HRNet](https://arxiv.org/abs/1904.04514)
-- [ ] [VoVNet](https://arxiv.org/abs/1904.09730)
++ [ ] [MobileNet v1](https://arxiv.org/abs/1704.04861)
++ [ ] [MobileNet v3](https://arxiv.org/abs/1905.02244)
++ [ ] [PeleeNet](https://arxiv.org/abs/1804.06882)
++ [ ] [DLA](https://arxiv.org/abs/1707.06484)
++ [ ] [HRNet](https://arxiv.org/abs/1904.04514)
++ [ ] [VoVNet](https://arxiv.org/abs/1904.09730)
