@@ -5,7 +5,7 @@ MODEL:
   WEIGHTS: "torchvision://MobileNet-V2-1.0"
   BACKBONE:
     NAME: "MobileNet-V2-1.0"
-    OUT_FEATURES: ["12", "19"]
+    OUT_FEATURES: ["13", "18"]
   NECK:
     NAME: "SSDLiteExtraLayers"
   ANCHOR:
@@ -24,7 +24,7 @@ DATASETS:
 INPUT:
   TRANSFORM: "SSDTransform"
 SOLVER:
-  IMS_PER_BATCH: 16
+  IMS_PER_BATCH: 32
   BASE_LR: 0.001
   STEPS: (80000, 100000)
   MAX_ITER: 120000
@@ -32,4 +32,4 @@ SOLVER:
   CHECKPOINT_PERIOD: 5000
 TEST:
   EVAL_PERIOD: 5000
-OUTPUT_DIR: "output/pascal_voc/ssd_300_vgg_16_120e"
+OUTPUT_DIR: "output/pascal_voc/ssd_lite_320_mobilenet_v2_1_0_240e"

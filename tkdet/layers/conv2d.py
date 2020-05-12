@@ -82,7 +82,7 @@ class DepthwiseSeparableConv2d(nn.Module):
             in_channels,
             bias,
             norm=norm,
-            activation=activation
+            activation=activation,
             **kwargs
         )
         last_norm = kwargs.get("last_norm", norm)
@@ -96,7 +96,7 @@ class DepthwiseSeparableConv2d(nn.Module):
             activation=last_activation
         )
 
-    def forward(self):
+    def forward(self, x):
         x = self.dw(x)
         x = self.pw(x)
         return x

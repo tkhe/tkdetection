@@ -98,12 +98,12 @@ class SSDLiteExtraLayers(Neck):
 
         out_channels = [512, 256, 256, 64]
         self._out_features = in_features + [f"extra{i}" for i in range(1, 5)]
-        self._out_feature_channels = dict(zip(self._out_features, in_features + out_channels))
+        self._out_feature_channels = dict(zip(self._out_features, in_channels + out_channels))
         self._out_feature_strides = dict(zip(self._out_features, cfg.SSD.STRIDES))
 
     def forward(self, x):
         results = [x[f] for f in x]
-        out = x[-1]
+        out = results[-1]
 
         for m in self.extras:
             out = m(out)
@@ -121,4 +121,4 @@ def build_vgg_ssd_extra_layers(cfg, input_shape):
 
 @NECK_REGISTRY.register("SSDLiteExtraLayers")
 def build_ssd_lite_extra_layers(cfg, input_shape):
-    return SSDLiteExtraLayers(cfg, input_shape, cfg.MOBILENETV2.NORM)
+    return SSDLiteExtraLayers(cfg, input_shape, cfg.MOBILENET_V2.NORM)
