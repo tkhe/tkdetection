@@ -1,0 +1,35 @@
+_BASE_: "../Base-SSD.yaml"
+MODEL:
+  META_ARCHITECTURE: "SSD"
+  NUM_CLASSES: 20
+  WEIGHTS: "torchvision://MobileNet-V2-1.0"
+  BACKBONE:
+    NAME: "MobileNet-V2-1.0"
+    OUT_FEATURES: ["12", "19"]
+  NECK:
+    NAME: "SSDLiteExtraLayers"
+  ANCHOR:
+    NAME: "SSDAnchorGenerator"
+    SIZES: [60, 105, 150, 195, 240, 285, 330]
+    ASPECT_RATIOS: [[2, 3], [2, 3], [2, 3], [2, 3], [2, 3], [2, 3]]
+    OFFSET: 0.5
+SSD:
+  SIZE: 320
+  HEAD:
+    NAME: "SSDLiteHead"
+    NORM: "BN"
+DATASETS:
+  TRAIN: ("voc_2007_trainval", "voc_2012_trainval")
+  TEST: ("voc_2007_test",)
+INPUT:
+  TRANSFORM: "SSDTransform"
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.001
+  STEPS: (80000, 100000)
+  MAX_ITER: 120000
+  WARMUP_ITERS: 500
+  CHECKPOINT_PERIOD: 5000
+TEST:
+  EVAL_PERIOD: 5000
+OUTPUT_DIR: "output/pascal_voc/ssd_300_vgg_16_120e"

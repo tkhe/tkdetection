@@ -5,10 +5,15 @@ import torch.nn as nn
 from tkdet.layers import Conv2d
 from tkdet.layers import L2Norm
 from tkdet.layers import ShapeSpec
+from tkdet.models.backbone.mobilenet import InvertedResidual
 from .base import Neck
 from .build import NECK_REGISTRY
 
-__all__ = ["VGGExtraLayers", "build_ssd_extra_layers"]
+__all__ = [
+    "VGGExtraLayers",
+    "build_vgg_ssd_extra_layers",
+    "build_ssd_lite_extra_layers",
+]
 
 
 class VGGExtraLayers(Neck):
@@ -28,12 +33,7 @@ class VGGExtraLayers(Neck):
         ],
     }
 
-    def __init__(
-        self,
-        cfg,
-        input_shape: Dict[str, ShapeSpec],
-        norm=""
-    ):
+    def __init__(self, cfg, input_shape: Dict[str, ShapeSpec], norm=""):
         super().__init__()
 
         input_size = cfg.SSD.SIZE
@@ -80,6 +80,45 @@ class VGGExtraLayers(Neck):
         return dict(zip(self._out_features, results))
 
 
+class SSDLiteExtraLayers(Neck):
+    def __init__(self, cfg, input_shape: Dict[str, ShapeSpec], norm="BN"):
+        super().__init__()
+
+        in_features = [f for f in input_shape]
+        in_channels = [input_shape[f].channels for f in input_shape]
+
+        self.extras = nn.ModuleList(
+            [
+                InvertedResidual(in_channels[-1], 512, 2, 0.2, norm),
+                InvertedResidual(512, 256, 2, 0.25, norm),
+                InvertedResidual(256, 256, 2, 0.5, norm),
+                InvertedResidual(256, 64, 2, 0.25, norm),
+            ]
+        )
+
+        out_channels = [512, 256, 256, 64]
+        self._out_features = in_features + [f"extra{i}" for i in range(1, 5)]
+        self._out_feature_channels = dict(zip(self._out_features, in_features + out_channels))
+        self._out_feature_strides = dict(zip(self._out_features, cfg.SSD.STRIDES))
+
+    def forward(self, x):
+        results = [x[f] for f in x]
+        out = x[-1]
+
+        for m in self.extras:
+            out = m(out)
+            results.append(out)
+
+        assert len(results) == len(self._out_features)
+
+        return dict(zip(self._out_features, results))
+
+
 @NECK_REGISTRY.register("VGGExtraLayers")
-def build_ssd_extra_layers(cfg, input_shape):
+def build_vgg_ssd_extra_layers(cfg, input_shape):
     return VGGExtraLayers(cfg, input_shape, cfg.VGG.NORM)
+
+
+@NECK_REGISTRY.register("SSDLiteExtraLayers")
+def build_ssd_lite_extra_layers(cfg, input_shape):
+    return SSDLiteExtraLayers(cfg, input_shape, cfg.MOBILENETV2.NORM)

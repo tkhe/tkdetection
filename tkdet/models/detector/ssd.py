@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tkdet.layers import DepthwiseSeparableConv2d
 from tkdet.layers import ShapeSpec
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
@@ -272,6 +273,48 @@ class SSDHead(nn.Module):
             bbox_reg.append(self.bbox_pred[idx](feature))
         return logits, bbox_reg
 
+
+@SSD_HEAD_REGISTRY.register()
+class SSDLiteHead(nn.Module):
+    def __init__(self, cfg, input_shape: List[ShapeSpec]):
+        super().__init__()
+
+        in_channels = [x.channels for x in input_shape]
+        num_anchors = build_anchor_generator(cfg, input_shape).num_cell_anchors
+        num_classes = cfg.MODEL.NUM_CLASSES
+        norm = cfg.SSD.HEAD.NORM
+
+        cls_score = []
+        bbox_pred = []
+        for i, c in enumerate(in_channels):
+            if i == len(in_channels) - 1:
+                cls_score.append(nn.Conv2d(c, num_anchors[i] * (num_classes + 1), 1))
+                bbox_pred.append(nn.Conv2d(c, num_anchors[i] * 4, 1))
+            else:
+                cls_score.append(
+                    DepthwiseSeparableConv2d(
+                        c,
+                        num_anchors[i] * (num_classes + 1),
+                        3,
+                        1,
+                        norm=norm,
+                        last_norm=""
+                    )
+                )
+                bbox_pred.append(
+                    DepthwiseSeparableConv2d(c, num_anchors[i] * 4, 3, 1, norm=norm, last_norm="")
+                )
+
+        self.cls_score = nn.ModuleList(cls_score)
+        self.bbox_pred = nn.ModuleList(bbox_pred)
+
+    def forward(self, features):
+        logits = []
+        bbox_reg = []
+        for idx, feature in enumerate(features):
+            logits.append(self.cls_score[idx](feature))
+            bbox_reg.append(self.bbox_pred[idx](feature))
+        return logits, bbox_reg
 
 def build_ssd_head(cfg, input_shape):
     return SSD_HEAD_REGISTRY.get(cfg.SSD.HEAD.NAME)(cfg, input_shape)

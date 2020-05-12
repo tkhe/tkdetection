@@ -85,13 +85,14 @@ class DepthwiseSeparableConv2d(nn.Module):
             activation=activation
             **kwargs
         )
+        last_norm = kwargs.get("last_norm", norm)
         last_activation = kwargs.get("last_activation", "")
         self.pw = Conv2d(
             in_channels,
             out_channels,
             1,
             bias=bias,
-            norm=norm,
+            norm=last_norm,
             activation=last_activation
         )
 

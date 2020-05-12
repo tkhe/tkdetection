@@ -269,6 +269,8 @@ _C.SSD.HEAD = CN()
 
 _C.SSD.HEAD.NAME = "SSDHead"
 
+_C.SSD.HEAD.NORM = "BN"
+
 
 # -----------------------------------------------------------------------------
 # ResNet and ResNeXt
