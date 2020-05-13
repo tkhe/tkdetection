@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tkdet.layers import DepthwiseSeparableConv2d
+from tkdet.layers import Conv2d
 from tkdet.layers import ShapeSpec
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
@@ -292,17 +292,16 @@ class SSDLiteHead(nn.Module):
                 bbox_pred.append(nn.Conv2d(c, num_anchors[i] * 4, 1))
             else:
                 cls_score.append(
-                    DepthwiseSeparableConv2d(
-                        c,
-                        num_anchors[i] * (num_classes + 1),
-                        3,
-                        1,
-                        norm=norm,
-                        last_norm=""
+                    nn.Sequential(
+                        Conv2d(c, c, 3, 1, groups=c, norm=norm, activation="ReLU6"),
+                        Conv2d(c, num_anchors[i] * (num_classes + 1), 1)
                     )
                 )
                 bbox_pred.append(
-                    DepthwiseSeparableConv2d(c, num_anchors[i] * 4, 3, 1, norm=norm, last_norm="")
+                    nn.Sequential(
+                        Conv2d(c, c, 3, 1, groups=c, norm=norm, activation="ReLU6"),
+                        Conv2d(c, num_anchors[i] * 4, 1)
+                    )
                 )
 
         self.cls_score = nn.ModuleList(cls_score)
