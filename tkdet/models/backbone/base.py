@@ -29,6 +29,5 @@ class Backbone(nn.Module, ABC):
             for name in self._out_features
         }
 
-    @abstractmethod
     def freeze(self, freeze_at=0):
         raise NotImplementedError
