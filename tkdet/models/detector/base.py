@@ -1,4 +1,5 @@
 from abc import ABC
+from abc import abstractmethod
 
 import torch
 import torch.nn as nn
@@ -17,17 +18,18 @@ class Detector(nn.Module, ABC):
     def device(self):
         return self.pixel_mean.device
 
-    @classmethod
-    def forward(cls, batched_inputs):
+    @abstractmethod
+    def forward(self, batched_inputs):
         pass
 
-    @classmethod
-    def losses(cls):
+    @abstractmethod
+    def losses(self):
         pass
 
-    @classmethod
-    def inference(cls):
+    @abstractmethod
+    def inference(self):
         pass
 
+    @abstractmethod
     def preprocess_inputs(self, batched_inputs):
         raise NotImplementedError

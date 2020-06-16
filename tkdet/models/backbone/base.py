@@ -1,4 +1,5 @@
 from abc import ABC
+from abc import abstractmethod
 
 import torch.nn as nn
 
@@ -11,8 +12,8 @@ class Backbone(nn.Module, ABC):
     def __init__(self):
         super().__init__()
 
-    @classmethod
-    def forward(cls, x):
+    @abstractmethod
+    def forward(self, x):
         pass
 
     @property
@@ -28,6 +29,6 @@ class Backbone(nn.Module, ABC):
             for name in self._out_features
         }
 
-    @classmethod
-    def freeze(cls, freeze_at=0):
+    @abstractmethod
+    def freeze(self, freeze_at=0):
         raise NotImplementedError

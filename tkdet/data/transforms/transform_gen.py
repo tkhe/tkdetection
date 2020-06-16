@@ -2,6 +2,7 @@ import inspect
 import pprint
 import sys
 from abc import ABC
+from abc import abstractmethod
 
 import cv2
 import numpy as np
@@ -56,8 +57,8 @@ class TransformGen(ABC):
                 if k != "self" and not k.startswith("_"):
                     setattr(self, k, v)
 
-    @classmethod
-    def get_transform(cls, img):
+    @abstractmethod
+    def get_transform(self, img):
         pass
 
     def _rand_range(self, low=1.0, high=None, size=None):

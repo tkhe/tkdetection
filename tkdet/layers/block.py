@@ -1,15 +1,19 @@
+from abc import ABC
+from abc import abstractmethod
+
 import torch.nn as nn
 
 from .batch_norm import FrozenBatchNorm2d
 
 __all__ = ["Block"]
 
+
 class Block(nn.Module):
     def __init__(self):
         super().__init__()
 
-    @classmethod
-    def forward(cls, x):
+    @abstractmethod
+    def forward(self, x):
         raise NotImplementedError
 
     def freeze(self):

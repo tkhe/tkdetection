@@ -1,4 +1,5 @@
 from abc import ABC
+from abc import abstractmethod
 
 import torch.nn as nn
 
@@ -11,8 +12,8 @@ class Neck(nn.Module, ABC):
     def __init__(self):
         super().__init__()
 
-    @classmethod
-    def forward(cls, bottom_up_features):
+    @abstractmethod
+    def forward(self, bottom_up_features):
         pass
 
     @property
