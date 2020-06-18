@@ -44,7 +44,7 @@ class Box2BoxTransform(object):
         return deltas
 
     def apply_deltas(self, deltas, boxes):
-        boxes = boxes.to(deltas.dtype).unsqueeze(2)
+        boxes = boxes.to(deltas.dtype)
 
         widths = boxes[:, 2] - boxes[:, 0]
         heights = boxes[:, 3] - boxes[:, 1]
