@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from tkdet.config import configurable
 from tkdet.layers import ShapeSpec
 from tkdet.models.matcher import Matcher
 from tkdet.models.pooler import ROIPooler
@@ -84,19 +85,40 @@ def select_proposals_with_visible_keypoints(proposals: List[Instances]) -> List[
 
 
 class ROIHeads(torch.nn.Module):
-    def __init__(self, cfg, input_shape: Dict[str, ShapeSpec]):
-        super(ROIHeads, self).__init__()
-        self.batch_size_per_image = cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE
-        self.positive_sample_fraction = cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION
-        self.in_features = cfg.MODEL.ROI_HEADS.IN_FEATURES
-        self.num_classes = cfg.MODEL.NUM_CLASSES
-        self.proposal_append_gt = cfg.MODEL.ROI_HEADS.PROPOSAL_APPEND_GT
+    @configurable
+    def __init__(
+        self,
+        *,
+        num_classes,
+        batch_size_per_image,
+        positive_sample_fraction,
+        proposal_matcher,
+        proposal_append_gt=True
+    ):
+        """
+        NOTE: this interface is experimental.
+        """
+        super().__init__()
 
-        self.proposal_matcher = Matcher(
-            cfg.MODEL.ROI_HEADS.IOU_THRESHOLDS,
-            cfg.MODEL.ROI_HEADS.IOU_LABELS,
-            allow_low_quality_matches=False,
-        )
+        self.batch_size_per_image = batch_size_per_image
+        self.positive_sample_fraction = positive_sample_fraction
+        self.num_classes = num_classes
+        self.proposal_matcher = proposal_matcher
+        self.proposal_append_gt = proposal_append_gt
+
+    @classmethod
+    def from_config(cls, cfg):
+        return {
+            "batch_size_per_image": cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE,
+            "positive_sample_fraction": cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION,
+            "num_classes": cfg.MODEL.NUM_CLASSES,
+            "proposal_append_gt": cfg.MODEL.ROI_HEADS.PROPOSAL_APPEND_GT,
+            "proposal_matcher": Matcher(
+                cfg.MODEL.ROI_HEADS.IOU_THRESHOLDS,
+                cfg.MODEL.ROI_HEADS.IOU_LABELS,
+                allow_low_quality_matches=False,
+            ),
+        }
 
     def _sample_proposals(
         self,
@@ -186,7 +208,9 @@ class ROIHeads(torch.nn.Module):
 @ROI_HEADS_REGISTRY.register()
 class StandardROIHeads(ROIHeads):
     def __init__(self, cfg, input_shape):
-        super(StandardROIHeads, self).__init__(cfg, input_shape)
+        super().__init__(cfg)
+
+        self.in_features = cfg.MODEL.ROI_HEADS.IN_FEATURES
         self._init_box_head(cfg, input_shape)
         self._init_mask_head(cfg, input_shape)
         self._init_keypoint_head(cfg, input_shape)
