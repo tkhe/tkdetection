@@ -15,6 +15,7 @@ from fvcore.common.file_io import PathManager
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from PIL import Image
 
+from tkdet.data import MetadataCatalog
 from tkdet.structures import BitMasks
 from tkdet.structures import BoxMode
 from tkdet.structures import Boxes
@@ -231,8 +232,10 @@ class VisImage(object):
 
 
 class Visualizer(object):
-    def __init__(self, img_rgb, metadata, scale=1.0, instance_mode=ColorMode.IMAGE):
+    def __init__(self, img_rgb, metadata=None, scale=1.0, instance_mode=ColorMode.IMAGE):
         self.img = np.asarray(img_rgb).clip(0, 255).astype(np.uint8)
+        if metadata is None:
+            metadata = MetadataCatalog.get("__nonexist__")
         self.metadata = metadata
         self.output = VisImage(self.img, scale=scale)
         self.cpu_device = torch.device("cpu")
@@ -613,13 +616,11 @@ class Visualizer(object):
         edge_color=None,
         text=None,
         alpha=0.5,
-        area_threshold=4096
+        area_threshold=0
     ):
         if color is None:
             color = random_color(rgb=True, maximum=1)
         color = mplc.to_rgb(color)
-        if area_threshold is None:
-            area_threshold = 4096
 
         has_valid_segment = False
         binary_mask = binary_mask.astype("uint8")
@@ -629,7 +630,7 @@ class Visualizer(object):
         if not mask.has_holes:
             for segment in mask.polygons:
                 area = mask_util.area(mask_util.frPyObjects([segment], shape2d[0], shape2d[1]))
-                if area < area_threshold:
+                if area < (area_threshold or 0):
                     continue
                 has_valid_segment = True
                 segment = segment.reshape(-1, 2)
