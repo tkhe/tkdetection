@@ -51,11 +51,11 @@ class Instances(object):
     def get_fields(self) -> Dict[str, Any]:
         return self._fields
 
-    def to(self, device: str) -> "Instances":
+    def to(self, *args: Any, **kwargs: Any) -> "Instances":
         ret = Instances(self._image_size)
         for k, v in self._fields.items():
             if hasattr(v, "to"):
-                v = v.to(device)
+                v = v.to(*args, **kwargs)
             ret.set(k, v)
         return ret
 

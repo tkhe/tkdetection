@@ -1,5 +1,6 @@
 from enum import IntEnum
 from enum import unique
+from typing import Any
 from typing import Iterator
 from typing import List
 from typing import Tuple
@@ -77,8 +78,8 @@ class Boxes(object):
     def clone(self) -> "Boxes":
         return Boxes(self.tensor.clone())
 
-    def to(self, device: str) -> "Boxes":
-        return Boxes(self.tensor.to(device))
+    def to(self, *args: Any, **kwargs: Any) -> "Boxes":
+        return Boxes(self.tensor.to(*args, **kwargs))
 
     def area(self) -> torch.Tensor:
         box = self.tensor
