@@ -1,5 +1,7 @@
 import itertools
 import logging
+from typing import List
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -7,7 +9,9 @@ import torch.nn.functional as F
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
 from tkdet.layers import smooth_l1_loss
+from tkdet.models.box_regression import Box2BoxTransform
 from tkdet.structures import Boxes
+from tkdet.structures import ImageList
 from tkdet.structures import Instances
 from tkdet.utils.events import get_event_storage
 
@@ -17,14 +21,14 @@ __all__ = [""]
 
 
 def find_top_rpn_proposals(
-    proposals,
-    pred_objectness_logits,
-    images,
-    nms_thresh,
-    pre_nms_topk,
-    post_nms_topk,
-    min_box_side_len,
-    training,
+    proposals: List[torch.Tensor],
+    pred_objectness_logits: List[torch.Tensor],
+    images: ImageList,
+    nms_thresh: float,
+    pre_nms_topk: int,
+    post_nms_topk: int,
+    min_box_side_len: int,
+    training: bool,
 ):
     image_sizes = images.image_sizes
     num_images = len(image_sizes)
@@ -94,7 +98,7 @@ def rpn_losses(
     gt_anchor_deltas,
     pred_objectness_logits,
     pred_anchor_deltas,
-    smooth_l1_beta
+    smooth_l1_beta: float
 ):
     pos_masks = gt_labels == 1
     localization_loss = smooth_l1_loss(
@@ -116,15 +120,15 @@ def rpn_losses(
 class RPNOutputs(object):
     def __init__(
         self,
-        box2box_transform,
-        batch_size_per_image,
-        images,
-        pred_objectness_logits,
-        pred_anchor_deltas,
+        box2box_transform: Box2BoxTransform,
+        batch_size_per_image: int,
+        images: ImageList,
+        pred_objectness_logits: List[torch.Tensor],
+        pred_anchor_deltas: List[torch.Tensor],
         anchors,
-        gt_labels=None,
-        gt_boxes=None,
-        smooth_l1_beta=0.0,
+        gt_labels: Optional[List[torch.Tensor]] = None,
+        gt_boxes: Optional[List[torch.Tensor]] = None,
+        smooth_l1_beta: float = 0.0,
     ):
         self.box2box_transform = box2box_transform
         self.batch_size_per_image = batch_size_per_image

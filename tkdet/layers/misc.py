@@ -1,4 +1,5 @@
 import math
+from typing import List
 
 import torch
 import torch.nn as nn
@@ -12,7 +13,7 @@ __all__ = [
 ]
 
 
-def cat(tensors, dim=0):
+def cat(tensors: List[torch.Tensor], dim: int = 0):
     assert isinstance(tensors, (list, tuple))
 
     if len(tensors) == 1:

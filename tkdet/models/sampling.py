@@ -3,7 +3,12 @@ import torch
 __all__ = ["subsample_labels"]
 
 
-def subsample_labels(labels, num_samples, positive_fraction, bg_label):
+def subsample_labels(
+    labels: torch.Tensor,
+    num_samples: int,
+    positive_fraction: float,
+    bg_label: int
+):
     positive = torch.nonzero((labels != -1) & (labels != bg_label), as_tuple=True)[0]
     negative = torch.nonzero(labels == bg_label, as_tuple=True)[0]
 

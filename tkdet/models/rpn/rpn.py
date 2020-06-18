@@ -1,5 +1,6 @@
 from typing import Dict
 from typing import List
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -8,6 +9,7 @@ import torch.nn.functional as F
 from tkdet.config import configurable
 from tkdet.layers import ShapeSpec
 from tkdet.structures import Boxes
+from tkdet.structures import ImageList
 from tkdet.structures import Instances
 from tkdet.structures import pairwise_iou
 from tkdet.utils.memory import retry_if_cuda_oom
@@ -52,12 +54,12 @@ class StandardRPNHead(nn.Module):
         anchor_generator = build_anchor_generator(cfg, input_shape)
         num_anchors = anchor_generator.num_anchors
         box_dim = anchor_generator.box_dim
-        assert (len(set(num_anchors) == 1), \
+        assert (len(set(num_anchors) == 1)), \
             "Each level must have the same number of anchors per spatial position"
 
         return {"in_channels": in_channels, "num_anchors": num_anchors[0], "box_dim": box_dim}
 
-    def forward(self, features):
+    def forward(self, features: List[torch.Tensor]):
         pred_objectness_logits = []
         pred_anchor_deltas = []
         for x in features:
@@ -148,7 +150,12 @@ class RPN(nn.Module):
             matched_gt_boxes.append(matched_gt_boxes_i)
         return gt_labels, matched_gt_boxes
 
-    def forward(self, images, features, gt_instances=None):
+    def forward(
+        self,
+        images: ImageList,
+        features: Dict[str, torch.Tensor],
+        gt_instances: Optional[Instances] = None,
+    ):
         features = [features[f] for f in self.in_features]
         pred_objectness_logits, pred_anchor_deltas = self.rpn_head(features)
         anchors = self.anchor_generator(features)

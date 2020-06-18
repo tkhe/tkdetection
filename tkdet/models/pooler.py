@@ -1,5 +1,7 @@
 import math
 import sys
+from typing import List
+
 import torch
 from torch import nn
 from torchvision.ops import RoIPool
@@ -10,7 +12,13 @@ from tkdet.layers import cat
 __all__ = ["ROIPooler"]
 
 
-def assign_boxes_to_levels(box_lists, min_level, max_level, canonical_box_size, canonical_level):
+def assign_boxes_to_levels(
+    box_lists,
+    min_level: int,
+    max_level: int,
+    canonical_box_size: int,
+    canonical_level: int
+):
     eps = sys.float_info.epsilon
     box_sizes = torch.sqrt(cat([boxes.area() for boxes in box_lists]))
     level_assignments = torch.floor(
@@ -102,7 +110,7 @@ class ROIPooler(nn.Module):
 
         self.canonical_box_size = canonical_box_size
 
-    def forward(self, x, box_lists):
+    def forward(self, x: List[torch.Tensor], box_lists):
         num_level_assignments = len(self.level_poolers)
 
         assert isinstance(x, list) and isinstance(box_lists, list), \

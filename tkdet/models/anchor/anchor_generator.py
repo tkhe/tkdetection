@@ -137,7 +137,7 @@ class DefaultAnchorGenerator(nn.Module):
                 anchors.append([x0, y0, x1, y1])
         return torch.tensor(anchors)
 
-    def forward(self, features):
+    def forward(self, features: List[torch.Tensor]):
         grid_sizes = [feature_map.shape[-2:] for feature_map in features]
         anchors_over_all_feature_maps = self._grid_anchors(grid_sizes)
 

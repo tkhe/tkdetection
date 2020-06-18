@@ -5,7 +5,12 @@ from torchvision.ops import nms
 __all__ = ["batched_nms"]
 
 
-def batched_nms(boxes, scores, idxs, iou_threshold):
+def batched_nms(
+    boxes: torch.Tensor,
+    scores: torch.Tensor,
+    idxs: torch.Tensor,
+    iou_threshold: float
+):
     assert boxes.shape[-1] == 4
 
     if len(boxes) < 40000:
