@@ -163,7 +163,12 @@ def transform_instance_annotations(
 
 def transform_keypoint_annotations(keypoints, transforms, image_size, keypoint_hflip_indices=None):
     keypoints = np.asarray(keypoints, dtype="float64").reshape(-1, 3)
-    keypoints[:, :2] = transforms.apply_coords(keypoints[:, :2])
+    keypoints_xy = transforms.apply_coords(keypoints[:, :2])
+
+    inside = (keypoints_xy >= np.array([0, 0])) & (keypoints_xy <= np.array(image_size[::-1]))
+    inside = inside.all(axis=1)
+    keypoints[:, :2] = keypoints_xy
+    keypoints[:, 2][~inside] = 0
 
     do_hflip = sum(isinstance(t, T.HFlipTransform) for t in transforms.transforms) % 2 == 1
 
