@@ -1,3 +1,4 @@
+import inspect
 import logging
 from typing import Dict
 from typing import List
@@ -207,78 +208,134 @@ class ROIHeads(torch.nn.Module):
 
 @ROI_HEADS_REGISTRY.register()
 class StandardROIHeads(ROIHeads):
-    def __init__(self, cfg, input_shape):
-        super().__init__(cfg)
+    @configurable
+    def __init__(
+        self,
+        *,
+        box_in_features: List[str],
+        box_pooler: ROIPooler,
+        box_head: nn.Module,
+        box_predictor: nn.Module,
+        mask_in_features: Optional[List[str]] = None,
+        mask_pooler: Optional[ROIPooler] = None,
+        mask_head: Optional[nn.Module] = None,
+        keypoint_in_features: Optional[List[str]] = None,
+        keypoint_pooler: Optional[ROIPooler] = None,
+        keypoint_head: Optional[nn.Module] = None,
+        train_on_pred_boxes: bool = False,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
 
-        self.in_features = cfg.MODEL.ROI_HEADS.IN_FEATURES
-        self._init_box_head(cfg, input_shape)
-        self._init_mask_head(cfg, input_shape)
-        self._init_keypoint_head(cfg, input_shape)
+        self.in_features = self.box_in_features = box_in_features
+        self.box_pooler = box_pooler
+        self.box_head = box_head
+        self.box_predictor = box_predictor
 
-    def _init_box_head(self, cfg, input_shape):
+        self.mask_on = mask_in_features is not None
+        if self.mask_on:
+            self.mask_in_features = mask_in_features
+            self.mask_pooler = mask_pooler
+            self.mask_head = mask_head
+
+        self.keypoint_on = keypoint_in_features is not None
+        if self.keypoint_on:
+            self.keypoint_in_features = keypoint_in_features
+            self.keypoint_pooler = keypoint_pooler
+            self.keypoint_head = keypoint_head
+
+        self.train_on_pred_boxes = train_on_pred_boxes
+
+    @classmethod
+    def from_config(cls, cfg, input_shape):
+        ret = super().from_config(cfg)
+        ret["train_on_pred_boxes"] = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
+        if inspect.ismethod(cls._init_box_head):
+            ret.update(cls._init_box_head(cfg, input_shape))
+        if inspect.ismethod(cls._init_mask_head):
+            ret.update(cls._init_mask_head(cfg, input_shape))
+        if inspect.ismethod(cls._init_keypoint_head):
+            ret.update(cls._init_keypoint_head(cfg, input_shape))
+        return ret
+
+    @classmethod
+    def _init_box_head(cls, cfg, input_shape):
+        in_features       = cfg.MODEL.ROI_HEADS.IN_FEATURES
         pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
-        pooler_scales = tuple(1.0 / input_shape[k].stride for k in self.in_features)
-        sampling_ratio = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
-        pooler_type = cfg.MODEL.ROI_BOX_HEAD.POOLER_TYPE
-        self.train_on_pred_boxes = cfg.MODEL.ROI_BOX_HEAD.TRAIN_ON_PRED_BOXES
+        pooler_scales     = tuple(1.0 / input_shape[k].stride for k in in_features)
+        sampling_ratio    = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
+        pooler_type       = cfg.MODEL.ROI_BOX_HEAD.POOLER_TYPE
 
-        in_channels = [input_shape[f].channels for f in self.in_features]
+        in_channels = [input_shape[f].channels for f in in_features]
         assert len(set(in_channels)) == 1, in_channels
 
         in_channels = in_channels[0]
 
-        self.box_pooler = ROIPooler(
+        box_pooler = ROIPooler(
             output_size=pooler_resolution,
             scales=pooler_scales,
             sampling_ratio=sampling_ratio,
             pooler_type=pooler_type,
         )
-        self.box_head = build_box_head(
+        box_head = build_box_head(
             cfg,
             ShapeSpec(channels=in_channels, height=pooler_resolution, width=pooler_resolution)
         )
-        self.box_predictor = FastRCNNOutputLayers(cfg, self.box_head.output_shape)
+        box_predictor = FastRCNNOutputLayers(cfg, box_head.output_shape)
+        return {
+            "box_in_features": in_features,
+            "box_pooler": box_pooler,
+            "box_head": box_head,
+            "box_predictor": box_predictor,
+        }
 
-    def _init_mask_head(self, cfg, input_shape):
-        self.mask_on = cfg.MODEL.MASK_ON
-        if not self.mask_on:
-            return
+    @classmethod
+    def _init_mask_head(cls, cfg, input_shape):
+        if not cfg.MODEL.MASK_ON:
+            return {}
+
+        in_features = cfg.MODEL.ROI_HEADS.IN_FEATURES
         pooler_resolution = cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION
-        pooler_scales = tuple(1.0 / input_shape[k].stride for k in self.in_features)
+        pooler_scales = tuple(1.0 / input_shape[k].stride for k in in_features)
         sampling_ratio = cfg.MODEL.ROI_MASK_HEAD.POOLER_SAMPLING_RATIO
         pooler_type = cfg.MODEL.ROI_MASK_HEAD.POOLER_TYPE
 
-        in_channels = [input_shape[f].channels for f in self.in_features][0]
+        in_channels = [input_shape[f].channels for f in in_features][0]
 
-        self.mask_pooler = ROIPooler(
+        ret = {"mask_in_features": in_features}
+        ret["mask_pooler"] = ROIPooler(
             output_size=pooler_resolution,
             scales=pooler_scales,
             sampling_ratio=sampling_ratio,
             pooler_type=pooler_type,
         )
-        self.mask_head = build_mask_head(
+        ret["mask_head"] = build_mask_head(
             cfg,
             ShapeSpec(channels=in_channels, width=pooler_resolution, height=pooler_resolution)
         )
+        return ret
 
-    def _init_keypoint_head(self, cfg, input_shape):
-        self.keypoint_on  = cfg.MODEL.KEYPOINT_ON
-        if not self.keypoint_on:
-            return
+    @classmethod
+    def _init_keypoint_head(cls, cfg, input_shape):
+        if not cfg.MODEL.KEYPOINT_ON:
+            return {}
+
+        in_features = cfg.MODEL.ROI_HEADS.IN_FEATURES
         pooler_resolution = cfg.MODEL.ROI_KEYPOINT_HEAD.POOLER_RESOLUTION
-        pooler_scales = tuple(1.0 / input_shape[k].stride for k in self.in_features)
+        pooler_scales = tuple(1.0 / input_shape[k].stride for k in in_features)
         sampling_ratio = cfg.MODEL.ROI_KEYPOINT_HEAD.POOLER_SAMPLING_RATIO
         pooler_type = cfg.MODEL.ROI_KEYPOINT_HEAD.POOLER_TYPE
 
-        in_channels = [input_shape[f].channels for f in self.in_features][0]
+        in_channels = [input_shape[f].channels for f in in_features][0]
 
-        self.keypoint_pooler = ROIPooler(
+        ret = {"keypoint_in_features": in_features}
+        ret["keypoint_pooler"] = ROIPooler(
             output_size=pooler_resolution,
             scales=pooler_scales,
             sampling_ratio=sampling_ratio,
             pooler_type=pooler_type,
         )
-        self.keypoint_head = build_keypoint_head(
+        ret["keypoint_head"] = build_keypoint_head(
             cfg,
             ShapeSpec(channels=in_channels, width=pooler_resolution, height=pooler_resolution)
         )
@@ -324,7 +381,7 @@ class StandardROIHeads(ROIHeads):
         features: Dict[str, torch.Tensor],
         proposals: List[Instances]
     ) -> Union[Dict[str, torch.Tensor], List[Instances]]:
-        features = [features[f] for f in self.in_features]
+        features = [features[f] for f in self.box_in_features]
         box_features = self.box_pooler(features, [x.proposal_boxes for x in proposals])
         box_features = self.box_head(box_features)
         predictions = self.box_predictor(box_features)
@@ -353,7 +410,7 @@ class StandardROIHeads(ROIHeads):
         if not self.mask_on:
             return {} if self.training else instances
 
-        features = [features[f] for f in self.in_features]
+        features = [features[f] for f in self.mask_in_features]
 
         if self.training:
             proposals, _ = select_foreground_proposals(instances, self.num_classes)
@@ -373,7 +430,7 @@ class StandardROIHeads(ROIHeads):
         if not self.keypoint_on:
             return {} if self.training else instances
 
-        features = [features[f] for f in self.in_features]
+        features = [features[f] for f in self.keypoint_in_features]
 
         if self.training:
             proposals, _ = select_foreground_proposals(instances, self.num_classes)

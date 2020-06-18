@@ -103,7 +103,7 @@ setup(
         "mock",
         "tqdm>4.29.0",
         "tensorboard",
-        "fvcore",
+        "fvcore>=0.1.1",
         "future",
         "pydot",
     ],

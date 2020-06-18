@@ -1,7 +1,10 @@
+from typing import List
+
 import torch
 import torch.nn as nn
 from torch.autograd.function import Function
 
+from tkdet.config import configurable
 from tkdet.layers import ShapeSpec
 from tkdet.models.box_regression import Box2BoxTransform
 from tkdet.models.matcher import Matcher
@@ -30,25 +33,68 @@ class _ScaleGradient(Function):
 
 @ROI_HEADS_REGISTRY.register()
 class CascadeROIHeads(StandardROIHeads):
-    def _init_box_head(self, cfg, input_shape):
+    @configurable
+    def __init__(
+        self,
+        *,
+        box_in_features: List[str],
+        box_pooler: ROIPooler,
+        box_heads: List[nn.Module],
+        box_predictors: List[nn.Module],
+        proposal_matchers: List[Matcher],
+        **kwargs,
+    ):
+        """
+        NOTE: this interface is experimental.
+        """
+        assert "proposal_matcher" not in kwargs, (
+            "CascadeROIHeads takes 'proposal_matchers=' for each stage instead "
+            "of one 'proposal_matcher='."
+        )
+
+        kwargs["proposal_matcher"] = proposal_matchers[0]
+        num_stages = self.num_cascade_stages = len(box_heads)
+        box_heads = nn.ModuleList(box_heads)
+        box_predictors = nn.ModuleList(box_predictors)
+        assert len(box_predictors) == num_stages, f"{len(box_predictors)} != {num_stages}!"
+        assert len(proposal_matchers) == num_stages, f"{len(proposal_matchers)} != {num_stages}!"
+
+        super().__init__(
+            box_in_features=box_in_features,
+            box_pooler=box_pooler,
+            box_head=box_heads,
+            box_predictor=box_predictors,
+            **kwargs,
+        )
+        self.proposal_matchers = proposal_matchers
+
+    @classmethod
+    def from_config(cls, cfg, input_shape):
+        ret = super().from_config(cfg, input_shape)
+        ret.pop("proposal_matcher")
+        return ret
+
+    @classmethod
+    def _init_box_head(cls, cfg, input_shape):
+        in_features = cfg.MODEL.ROI_HEADS.IN_FEATURES
         pooler_resolution = cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION
-        pooler_scales = tuple(1.0 / input_shape[k].stride for k in self.in_features)
+        pooler_scales = tuple(1.0 / input_shape[k].stride for k in in_features)
         sampling_ratio = cfg.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO
         pooler_type = cfg.MODEL.ROI_BOX_HEAD.POOLER_TYPE
         cascade_bbox_reg_weights = cfg.MODEL.ROI_BOX_CASCADE_HEAD.BBOX_REG_WEIGHTS
         cascade_ious = cfg.MODEL.ROI_BOX_CASCADE_HEAD.IOUS
-        self.num_cascade_stages = len(cascade_ious)
-        assert len(cascade_bbox_reg_weights) == self.num_cascade_stages
+
+        assert len(cascade_bbox_reg_weights) == len(cascade_ious)
         assert cfg.MODEL.ROI_BOX_HEAD.CLS_AGNOSTIC_BBOX_REG,  \
             "CascadeROIHeads only support class-agnostic regression now!"
         assert cascade_ious[0] == cfg.MODEL.ROI_HEADS.IOU_THRESHOLDS[0]
 
-        in_channels = [input_shape[f].channels for f in self.in_features]
+        in_channels = [input_shape[f].channels for f in in_features]
         assert len(set(in_channels)) == 1, in_channels
 
         in_channels = in_channels[0]
 
-        self.box_pooler = ROIPooler(
+        box_pooler = ROIPooler(
             output_size=pooler_resolution,
             scales=pooler_scales,
             sampling_ratio=sampling_ratio,
@@ -60,27 +106,27 @@ class CascadeROIHeads(StandardROIHeads):
             height=pooler_resolution
         )
 
-        self.box_head = nn.ModuleList()
-        self.box_predictor = nn.ModuleList()
-        self.box2box_transform = []
-        self.proposal_matchers = []
-        for k in range(self.num_cascade_stages):
+        box_heads, box_predictors, proposal_matchers = [], [], []
+        for match_iou, bbox_reg_weights in zip(cascade_ious, cascade_bbox_reg_weights):
             box_head = build_box_head(cfg, pooled_shape)
-            self.box_head.append(box_head)
-            self.box_predictor.append(
+            box_heads.append(box_head)
+            box_predictors.append(
                 FastRCNNOutputLayers(
                     cfg,
                     box_head.output_shape,
-                    box2box_transform=Box2BoxTransform(weights=cascade_bbox_reg_weights[k]),
+                    box2box_transform=Box2BoxTransform(weights=bbox_reg_weights),
                 )
             )
 
-            if k == 0:
-                self.proposal_matchers.append(None)
-            else:
-                self.proposal_matchers.append(
-                    Matcher([cascade_ious[k]], [0, 1], allow_low_quality_matches=False)
-                )
+            proposal_matchers.append(Matcher([match_iou], [0, 1], allow_low_quality_matches=False))
+
+        return {
+            "box_in_features": in_features,
+            "box_pooler": box_pooler,
+            "box_heads": box_heads,
+            "box_predictors": box_predictors,
+            "proposal_matchers": proposal_matchers,
+        }
 
     def forward(self, images, features, proposals, targets=None):
         del images
@@ -98,7 +144,7 @@ class CascadeROIHeads(StandardROIHeads):
             return pred_instances, {}
 
     def _forward_box(self, features, proposals, targets=None):
-        features = [features[f] for f in self.in_features]
+        features = [features[f] for f in self.box_in_features]
         head_outputs = []
         prev_pred_boxes = None
         image_sizes = [x.image_size for x in proposals]

@@ -31,6 +31,11 @@ def calculate_uncertainty(logits, classes):
 
 @ROI_HEADS_REGISTRY.register()
 class PointRendROIHeads(StandardROIHeads):
+    def __init__(self, cfg, input_shape):
+        super().__init__(cfg, input_shape)
+
+        self._init_mask_head(cfg, input_shape)
+
     def _init_mask_head(self, cfg, input_shape):
         self.mask_on = cfg.MODEL.MASK_ON
         if not self.mask_on:
