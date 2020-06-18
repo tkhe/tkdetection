@@ -62,7 +62,7 @@ namespace tkdet {
         const int sampling_ratio,
         bool aligned
     ) {
-        if (input.type().is_cuda()) {
+        if (input.is_cuda()) {
             #ifdef WITH_CUDA
             return ROIAlign_forward_cuda(
                 input,
@@ -101,7 +101,7 @@ namespace tkdet {
         const int sampling_ratio,
         bool aligned
     ) {
-        if (grad.type().is_cuda()) {
+        if (grad.is_cuda()) {
             #ifdef WITH_CUDA
             return ROIAlign_backward_cuda(
                 grad,

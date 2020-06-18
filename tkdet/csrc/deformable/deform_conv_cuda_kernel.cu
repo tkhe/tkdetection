@@ -368,7 +368,7 @@ namespace tkdet {
         at::cuda::CUDAGuard device_guard(data_im.device());
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_im.type(), "deformable_im2col_gpu", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_im.scalar_type(), "deformable_im2col_gpu", ([&] {
             const scalar_t* data_im_ = data_im.data_ptr<scalar_t>();
             const scalar_t* data_offset_ = data_offset.data_ptr<scalar_t>();
             scalar_t* data_col_ = data_col.data_ptr<scalar_t>();
@@ -434,7 +434,7 @@ namespace tkdet {
         at::cuda::CUDAGuard device_guard(data_col.device());
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_col.type(), "deformable_col2im_gpu", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_col.scalar_type(), "deformable_col2im_gpu", ([&] {
             const scalar_t* data_col_ = data_col.data_ptr<scalar_t>();
             const scalar_t* data_offset_ = data_offset.data_ptr<scalar_t>();
             scalar_t* grad_im_ = grad_im.data_ptr<scalar_t>();
@@ -501,7 +501,7 @@ namespace tkdet {
         at::cuda::CUDAGuard device_guard(data_col.device());
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_col.type(), "deformable_col2im_coord_gpu", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_col.scalar_type(), "deformable_col2im_coord_gpu", ([&] {
             const scalar_t* data_col_ = data_col.data_ptr<scalar_t>();
             const scalar_t* data_im_ = data_im.data_ptr<scalar_t>();
             const scalar_t* data_offset_ = data_offset.data_ptr<scalar_t>();
@@ -911,7 +911,7 @@ namespace tkdet {
         at::cuda::CUDAGuard device_guard(data_im.device());
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_im.type(), "modulated_deformable_im2col_gpu", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_im.scalar_type(), "modulated_deformable_im2col_gpu", ([&] {
             const scalar_t* data_im_ = data_im.data_ptr<scalar_t>();
             const scalar_t* data_offset_ = data_offset.data_ptr<scalar_t>();
             const scalar_t* data_mask_ = data_mask.data_ptr<scalar_t>();
@@ -979,7 +979,7 @@ namespace tkdet {
         at::cuda::CUDAGuard device_guard(data_col.device());
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_col.type(), "modulated_deformable_col2im_gpu", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_col.scalar_type(), "modulated_deformable_col2im_gpu", ([&] {
             const scalar_t* data_col_ = data_col.data_ptr<scalar_t>();
             const scalar_t* data_offset_ = data_offset.data_ptr<scalar_t>();
             const scalar_t* data_mask_ = data_mask.data_ptr<scalar_t>();
@@ -1049,7 +1049,7 @@ namespace tkdet {
         at::cuda::CUDAGuard device_guard(data_col.device());
         cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_col.type(), "modulated_deformable_col2im_coord_gpu", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(data_col.scalar_type(), "modulated_deformable_col2im_coord_gpu", ([&] {
             const scalar_t* data_col_ = data_col.data_ptr<scalar_t>();
             const scalar_t* data_im_ = data_im.data_ptr<scalar_t>();
             const scalar_t* data_offset_ = data_offset.data_ptr<scalar_t>();
