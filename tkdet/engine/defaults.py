@@ -192,8 +192,8 @@ class DefaultTrainer(SimpleTrainer):
 
     def resume_or_load(self, resume=True):
         checkpoint = self.checkpointer.resume_or_load(self.cfg.MODEL.WEIGHTS, resume=resume)
-        self.start_iter = checkpoint.get("iteration", -1) if resume else -1
-        self.start_iter += 1
+        if resume and self.checkpointer.has_checkpoint():
+            self.start_iter = checkpoint.get("iteration", -1) + 1
 
     def build_hooks(self):
         cfg = self.cfg.clone()
