@@ -1,9 +1,11 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from fvcore.transforms.transform import CropTransform
 from fvcore.transforms.transform import HFlipTransform
 from fvcore.transforms.transform import NoOpTransform
 from fvcore.transforms.transform import Transform
+from fvcore.transforms.transform import TransformList
 from PIL import Image
 
 try:
@@ -186,6 +188,25 @@ class RotationTransform(Transform):
             new_center = np.array([self.bound_w / 2, self.bound_h / 2]) + offset - rot_im_center
             rm[:, 2] += new_center
         return rm
+
+    def inverse(self):
+        if not self.expand:
+            raise NotImplementedError()
+        rotation = RotationTransform(
+            self.bound_h,
+            self.bound_w,
+            -self.angle,
+            True,
+            None,
+            self.interp
+        )
+        crop = CropTransform(
+            (rotation.bound_w - self.w) // 2,
+            (rotation.bound_h - self.h) // 2,
+            self.w,
+            self.h
+        )
+        return TransformList([rotation, crop])
 
 
 class PhotoMetricDistortionTransform(Transform):
