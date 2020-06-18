@@ -1,4 +1,5 @@
-from torch.nn import functional as F
+import torch
+import torch.nn.functional as F
 
 from tkdet.layers import paste_masks_in_image
 from tkdet.structures import Instances
@@ -8,7 +9,20 @@ __all__ = ["detector_postprocess", "sem_seg_postprocess"]
 
 
 def detector_postprocess(results, output_height, output_width, mask_threshold=0.5):
-    scale_x, scale_y = (output_width / results.image_size[1], output_height / results.image_size[0])
+    if isinstance(output_width, torch.Tensor):
+        output_width_tmp = output_width.float()
+    else:
+        output_width_tmp = output_width
+
+    if isinstance(output_height, torch.Tensor):
+        output_height_tmp = output_height.float()
+    else:
+        output_height_tmp = output_height
+
+    scale_x, scale_y = (
+        output_width_tmp / results.image_size[1],
+        output_height_tmp / results.image_size[0]
+    )
     results = Instances((output_height, output_width), **results.get_fields())
 
     if results.has("pred_boxes"):
