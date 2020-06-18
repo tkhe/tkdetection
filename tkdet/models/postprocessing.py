@@ -2,6 +2,7 @@ from torch.nn import functional as F
 
 from tkdet.layers import paste_masks_in_image
 from tkdet.structures import Instances
+from tkdet.utils.memory import retry_if_cuda_oom
 
 __all__ = ["detector_postprocess", "sem_seg_postprocess"]
 
@@ -21,7 +22,7 @@ def detector_postprocess(results, output_height, output_width, mask_threshold=0.
     results = results[output_boxes.nonempty()]
 
     if results.has("pred_masks"):
-        results.pred_masks = paste_masks_in_image(
+        results.pred_masks = retry_if_cuda_oom(paste_masks_in_image)(
             results.pred_masks[:, 0, :, :],
             results.pred_boxes,
             results.image_size,
