@@ -110,6 +110,10 @@ class DefaultAnchorGenerator(nn.Module):
 
     @property
     def num_cell_anchors(self):
+        return self.num_anchors
+
+    @property
+    def num_anchors(self):
         return [len(cell_anchors) for cell_anchors in self.cell_anchors]
 
     def _grid_anchors(self, grid_sizes: List[List[int]]):

@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tkdet.config import configurable
 from tkdet.layers import ShapeSpec
 from tkdet.structures import Boxes
 from tkdet.structures import Instances
@@ -31,28 +32,30 @@ def build_rpn_head(cfg, input_shape):
 
 @RPN_HEAD_REGISTRY.register()
 class StandardRPNHead(nn.Module):
-    def __init__(self, cfg, input_shape: List[ShapeSpec]):
+    @configurable
+    def __init__(self, *, in_channels: int, num_anchors: int, box_dim: int = 4):
         super().__init__()
 
-        in_channels = [s.channels for s in input_shape]
-        assert len(set(in_channels)) == 1, "Each level must have the same channel!"
-
-        in_channels = in_channels[0]
-        anchor_generator = build_anchor_generator(cfg, input_shape)
-        num_cell_anchors = anchor_generator.num_cell_anchors
-        box_dim = anchor_generator.box_dim
-        assert len(set(num_cell_anchors)) == 1, \
-            "Each level must have the same number of cell anchors"
-
-        num_cell_anchors = num_cell_anchors[0]
-        
-        self.conv = nn.Conv2d(in_channels, in_channels, 3, 1, 1)
-        self.objectness_logits = nn.Conv2d(in_channels, num_cell_anchors, 1)
-        self.anchor_deltas = nn.Conv2d(in_channels, num_cell_anchors * box_dim, 1)
+        self.conv = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1)
+        self.objectness_logits = nn.Conv2d(in_channels, num_anchors, kernel_size=1, stride=1)
+        self.anchor_deltas = nn.Conv2d(in_channels, num_anchors * box_dim, kernel_size=1, stride=1)
 
         for l in [self.conv, self.objectness_logits, self.anchor_deltas]:
             nn.init.normal_(l.weight, std=0.01)
             nn.init.constant_(l.bias, 0)
+
+    @classmethod
+    def from_config(cls, cfg, input_shape):
+        in_channels = [s.channels for s in input_shape]
+        assert len(set(in_channels)) == 1, "Each level must have the same channel!"
+
+        anchor_generator = build_anchor_generator(cfg, input_shape)
+        num_anchors = anchor_generator.num_anchors
+        box_dim = anchor_generator.box_dim
+        assert (len(set(num_anchors) == 1), \
+            "Each level must have the same number of anchors per spatial position"
+
+        return {"in_channels": in_channels, "num_anchors": num_anchors[0], "box_dim": box_dim}
 
     def forward(self, features):
         pred_objectness_logits = []
