@@ -192,20 +192,48 @@ def get_detection_dataset_dicts(
     return dataset_dicts
 
 
-def build_detection_train_loader(cfg, mapper=None):
-    num_workers = get_world_size()
-    images_per_batch = cfg.SOLVER.IMS_PER_BATCH
-    assert images_per_batch % num_workers == 0, \
-        "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number of workers ({}).".format(
-        images_per_batch,
-        num_workers
-    )
-    assert images_per_batch >= num_workers, \
-        "SOLVER.IMS_PER_BATCH ({}) must be larger than the number of workers ({}).".format(
-        images_per_batch, num_workers
-    )
-    images_per_worker = images_per_batch // num_workers
+def build_batch_data_loader(
+    dataset,
+    sampler,
+    total_batch_size,
+    *,
+    aspect_ratio_grouping=False,
+    num_workers=0
+):
+    world_size = get_world_size()
+    assert total_batch_size > 0 and total_batch_size % world_size == 0, \
+        "Total batch size ({}) must be divisible by the number of gpus ({}).".format(
+            total_batch_size,
+            world_size
+        )
 
+    batch_size = total_batch_size // world_size
+    if aspect_ratio_grouping:
+        data_loader = torch.utils.data.DataLoader(
+            dataset,
+            sampler=sampler,
+            num_workers=num_workers,
+            batch_sampler=None,
+            collate_fn=operator.itemgetter(0),
+            worker_init_fn=worker_init_reset_seed,
+        )
+        return AspectRatioGroupedDataset(data_loader, batch_size)
+    else:
+        batch_sampler = torch.utils.data.sampler.BatchSampler(
+            sampler,
+            batch_size,
+            drop_last=True
+        )
+        return torch.utils.data.DataLoader(
+            dataset,
+            num_workers=num_workers,
+            batch_sampler=batch_sampler,
+            collate_fn=trivial_batch_collator,
+            worker_init_fn=worker_init_reset_seed,
+        )
+
+
+def build_detection_train_loader(cfg, mapper=None):
     dataset_dicts = get_detection_dataset_dicts(
         cfg.DATASETS.TRAIN,
         filter_empty=cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS,
@@ -233,31 +261,13 @@ def build_detection_train_loader(cfg, mapper=None):
     else:
         raise ValueError(f"Unknown training sampler: {sampler_name}")
 
-    if cfg.DATALOADER.ASPECT_RATIO_GROUPING:
-        data_loader = torch.utils.data.DataLoader(
-            dataset,
-            sampler=sampler,
-            num_workers=cfg.DATALOADER.NUM_WORKERS,
-            batch_sampler=None,
-            collate_fn=operator.itemgetter(0),
-            worker_init_fn=worker_init_reset_seed,
-        )
-        data_loader = AspectRatioGroupedDataset(data_loader, images_per_worker)
-    else:
-        batch_sampler = torch.utils.data.sampler.BatchSampler(
-            sampler,
-            images_per_worker,
-            drop_last=True
-        )
-        data_loader = torch.utils.data.DataLoader(
-            dataset,
-            num_workers=cfg.DATALOADER.NUM_WORKERS,
-            batch_sampler=batch_sampler,
-            collate_fn=trivial_batch_collator,
-            worker_init_fn=worker_init_reset_seed,
-        )
-
-    return data_loader
+    return build_batch_data_loader(
+        dataset,
+        sampler,
+        cfg.SOLVER.IMS_PER_BATCH,
+        aspect_ratio_grouping=cfg.DATALOADER.ASPECT_RATIO_GROUPING,
+        num_workers=cfg.DATALOADER.NUM_WORKERS,
+    )
 
 
 def build_detection_test_loader(cfg, dataset_name, mapper=None):
