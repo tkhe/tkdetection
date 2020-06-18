@@ -1,7 +1,6 @@
 from enum import IntEnum
 from enum import unique
 from typing import Any
-from typing import Iterator
 from typing import List
 from typing import Tuple
 from typing import Union
@@ -64,8 +63,6 @@ class BoxMode(IntEnum):
 
 
 class Boxes(object):
-    BoxSizeType = Union[List[int], Tuple[int, int]]
-
     def __init__(self, tensor: torch.Tensor):
         device = tensor.device if isinstance(tensor, torch.Tensor) else torch.device("cpu")
         tensor = torch.as_tensor(tensor, dtype=torch.float32, device=device)
@@ -75,10 +72,11 @@ class Boxes(object):
 
         self.tensor = tensor
 
-    def clone(self) -> "Boxes":
+    def clone(self):
         return Boxes(self.tensor.clone())
 
-    def to(self, *args: Any, **kwargs: Any) -> "Boxes":
+    @torch.jit.unused
+    def to(self, *args: Any, **kwargs: Any):
         return Boxes(self.tensor.to(*args, **kwargs))
 
     def area(self) -> torch.Tensor:
@@ -86,7 +84,7 @@ class Boxes(object):
         area = (box[:, 2] - box[:, 0]) * (box[:, 3] - box[:, 1])
         return area
 
-    def clip(self, box_size: BoxSizeType) -> None:
+    def clip(self, box_size: Tuple[int, int]) -> None:
         assert torch.isfinite(self.tensor).all(), "Box tensor contains infinite or NaN!"
 
         h, w = box_size
@@ -102,7 +100,8 @@ class Boxes(object):
         keep = (widths > threshold) & (heights > threshold)
         return keep
 
-    def __getitem__(self, item: Union[int, slice, torch.BoolTensor]) -> "Boxes":
+    @torch.jit.unused
+    def __getitem__(self, item: Union[int, slice, torch.BoolTensor]):
         if isinstance(item, int):
             return Boxes(self.tensor[item].view(1, -1))
         b = self.tensor[item]
@@ -116,7 +115,7 @@ class Boxes(object):
     def __repr__(self) -> str:
         return "Boxes(" + str(self.tensor) + ")"
 
-    def inside_box(self, box_size: BoxSizeType, boundary_threshold: int = 0) -> torch.Tensor:
+    def inside_box(self, box_size: Tuple[int, int], boundary_threshold: int = 0) -> torch.Tensor:
         height, width = box_size
         inds_inside = (
             (self.tensor[..., 0] >= -boundary_threshold)
@@ -134,13 +133,14 @@ class Boxes(object):
         self.tensor[:, 1::2] *= scale_y
 
     @classmethod
-    def cat(cls, boxes_list: List["Boxes"]) -> "Boxes":
+    @torch.jit.unused
+    def cat(cls, boxes_list):
         assert isinstance(boxes_list, (list, tuple))
         
         if len(boxes_list) == 0:
             return cls(torch.empty(0))
 
-        assert all(isinstance(box, Boxes) for box in boxes_list)
+        assert all([isinstance(box, Boxes) for box in boxes_list])
 
         cat_boxes = cls(torch.cat([b.tensor for b in boxes_list], dim=0))
         return cat_boxes
@@ -149,7 +149,8 @@ class Boxes(object):
     def device(self) -> torch.device:
         return self.tensor.device
 
-    def __iter__(self) -> Iterator[torch.Tensor]:
+    @torch.jit.unused
+    def __iter__(self):
         yield from self.tensor
 
 
