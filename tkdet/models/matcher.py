@@ -2,6 +2,8 @@ from typing import List
 
 import torch
 
+from tkdet.layers import nonzero_tuple
+
 __all__ = ["Matcher"]
 
 
@@ -17,8 +19,8 @@ class Matcher(object):
 
         thresholds.insert(0, -float("inf"))
         thresholds.append(float("inf"))
-        assert all(low <= high for (low, high) in zip(thresholds[:-1], thresholds[1:]))
-        assert all(l in [-1, 0, 1] for l in labels)
+        assert all([low <= high for (low, high) in zip(thresholds[:-1], thresholds[1:])])
+        assert all([l in [-1, 0, 1] for l in labels])
         assert len(labels) == len(thresholds) - 1
 
         self.thresholds = thresholds
@@ -58,8 +60,7 @@ class Matcher(object):
 
     def set_low_quality_matches_(self, match_labels, match_quality_matrix):
         highest_quality_foreach_gt, _ = match_quality_matrix.max(dim=1)
-        _, pred_inds_with_highest_quality = torch.nonzero(
-            match_quality_matrix == highest_quality_foreach_gt[:, None],
-            as_tuple=True
+        _, pred_inds_with_highest_quality = nonzero_tuple(
+            match_quality_matrix == highest_quality_foreach_gt[:, None]
         )
         match_labels[pred_inds_with_highest_quality] = 1

@@ -9,6 +9,7 @@ from tkdet.config import configurable
 from tkdet.layers import ShapeSpec
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
+from tkdet.layers import nonzero_tuple
 from tkdet.models.box_regression import Box2BoxTransform
 from tkdet.structures import Boxes
 from tkdet.structures import Instances
@@ -145,10 +146,7 @@ class FastRCNNOutputs(object):
 
         bg_class_ind = self.pred_class_logits.shape[1] - 1
 
-        fg_inds = torch.nonzero(
-            (self.gt_classes >= 0) & (self.gt_classes < bg_class_ind),
-            as_tuple=True
-        )[0]
+        fg_inds = nonzero_tuple((self.gt_classes >= 0) & (self.gt_classes < bg_class_ind))[0]
         if cls_agnostic_bbox_reg:
             gt_class_cols = torch.arange(box_dim, device=device)
         else:

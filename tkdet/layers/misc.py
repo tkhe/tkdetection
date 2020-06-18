@@ -10,6 +10,7 @@ __all__ = [
     "cat",
     "interpolate",
     "make_divisible",
+    "nonzero_tuple",
 ]
 
 
@@ -77,3 +78,9 @@ def interpolate(input, size=None, scale_factor=None, mode="nearest", align_corne
     output_shape = tuple(_output_size(2))
     output_shape = input.shape[:-2] + output_shape
     return _NewEmptyTensorOp.apply(input, output_shape)
+
+
+def nonzero_tuple(x):
+    if x.dim() == 0:
+        return x.unsqueeze(0).nonzero().unbind(1)
+    return x.nonzero().unbind(1)

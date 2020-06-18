@@ -12,6 +12,7 @@ import torch.nn as nn
 
 from tkdet.config import configurable
 from tkdet.layers import ShapeSpec
+from tkdet.layers import nonzero_tuple
 from tkdet.models.matcher import Matcher
 from tkdet.models.pooler import ROIPooler
 from tkdet.models.rpn.proposal_utils import add_ground_truth_to_proposals
@@ -76,7 +77,7 @@ def select_proposals_with_visible_keypoints(proposals: List[Instances]) -> List[
             & (ys <= proposal_boxes[:, :, 3])
         )
         selection = (kp_in_box & vis_mask).any(dim=1)
-        selection_idxs = torch.nonzero(selection, as_tuple=True)[0]
+        selection_idxs = nonzero_tuple(selection)[0]
         all_num_fg.append(selection_idxs.numel())
         ret.append(proposals_per_image[selection_idxs])
 
