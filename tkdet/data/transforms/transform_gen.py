@@ -382,15 +382,16 @@ class Expand(TransformGen):
 
 def apply_transform_gens(transform_gens, img):
     for g in transform_gens:
-        assert isinstance(g, TransformGen), g
+        assert isinstance(g, (Transform, TransformGen)), g
 
     check_dtype(img)
 
     tfms = []
     for g in transform_gens:
-        tfm = g.get_transform(img)
+        tfm = g.get_transform(img) if isinstance(g, TransformGen) else g
         assert isinstance(tfm, Transform), \
             f"TransformGen {g} must return an instance of Transform! Got {tfm} instead"
+
         img = tfm.apply_image(img)
         tfms.append(tfm)
     return img, TransformList(tfms)

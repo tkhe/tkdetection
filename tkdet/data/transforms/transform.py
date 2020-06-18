@@ -191,6 +191,7 @@ class RotationTransform(Transform):
 class PhotoMetricDistortionTransform(Transform):
     def __init__(
         self,
+        image_format,
         brightness_delta=32,
         contrast_low=0.5,
         contrast_high=1.5,
@@ -200,6 +201,10 @@ class PhotoMetricDistortionTransform(Transform):
     ):
         super().__init__()
 
+        assert img_format in ["BGR", "RGB"]
+
+        self.is_rgb = img_format == "RGB"
+        del img_format
         self._set_attributes(locals())
 
     def apply_coords(self, coords):
@@ -209,6 +214,8 @@ class PhotoMetricDistortionTransform(Transform):
         return segmentation
 
     def apply_image(self, img, interp=None):
+        if self.is_rgb:
+            img = img[:, :, [2, 1, 0]]
         img = self.brightness(img)
         if np.random.randint(2):
             img = self.contrast(img)
@@ -218,6 +225,8 @@ class PhotoMetricDistortionTransform(Transform):
             img = self.saturation(img)
             img = self.hue(img)
             img = self.contrast(img)
+        if self.is_rgb:
+            img = img[:, :, [2, 1, 0]]
         return img
 
     def convert(self, img, alpha=1, beta=0):

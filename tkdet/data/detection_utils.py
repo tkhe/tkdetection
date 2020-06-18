@@ -351,7 +351,7 @@ def build_ssd_transform(cfg, is_train):
 
     if is_train:
         size = cfg.INPUT.MAX_SIZE_TRAIN
-        tfm_gens.append(T.PhotoMetricDistortion())
+        tfm_gens.append(T.PhotoMetricDistortion(cfg.INPUT.FORMAT))
         tfm_gens.append(T.Expand())
         tfm_gens.append(T.RandomFlip())
         logger.info("TransformGens used in training: " + str(tfm_gens))
