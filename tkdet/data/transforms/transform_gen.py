@@ -333,7 +333,7 @@ class RandomSaturation(TransformGen):
         self._init(locals())
 
     def get_transform(self, img):
-        assert img.shape[-1] == 3, "Saturation only works on RGB images"
+        assert img.shape[-1] == 3, "RandomSaturation only works on RGB images"
 
         w = np.random.uniform(self.intensity_min, self.intensity_max)
         grayscale = img.dot([0.299, 0.587, 0.114])[:, :, np.newaxis]
@@ -355,7 +355,8 @@ class RandomLighting(TransformGen):
         self.eigen_vals = np.array([0.2175, 0.0188, 0.0045])
 
     def get_transform(self, img):
-        assert img.shape[-1] == 3, "Saturation only works on RGB images"
+        assert img.shape[-1] == 3, "RandomLighting only works on RGB images"
+
         weights = np.random.normal(scale=self.scale, size=3)
         return BlendTransform(
             src_image=self.eigen_vecs.dot(weights * self.eigen_vals),

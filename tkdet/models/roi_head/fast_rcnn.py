@@ -10,7 +10,6 @@ from tkdet.layers import ShapeSpec
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
 from tkdet.models.box_regression import Box2BoxTransform
-from tkdet.models.box_regression import apply_deltas_broadcast
 from tkdet.structures import Boxes
 from tkdet.structures import Instances
 from tkdet.utils.events import get_event_storage
@@ -166,8 +165,7 @@ class FastRCNNOutputs(object):
         return loss_box_reg
 
     def _predict_boxes(self):
-        return apply_deltas_broadcast(
-            self.box2box_transform,
+        return self.box2box_transform.apply_deltas(
             self.pred_proposal_deltas,
             self.proposals.tensor
         )
@@ -297,9 +295,9 @@ class FastRCNNOutputLayers(nn.Module):
         proposal_boxes = [p.proposal_boxes for p in proposals]
         proposal_boxes = proposal_boxes[0].cat(proposal_boxes).tensor
         N, B = proposal_boxes.shape
-        predict_boxes = apply_deltas_broadcast(
-            self.box2box_transform,
-            proposal_deltas, proposal_boxes
+        predict_boxes = self.box2box_transform.apply_deltas(
+            proposal_deltas,
+            proposal_boxes
         )
 
         K = predict_boxes.shape[1] // B
@@ -321,8 +319,7 @@ class FastRCNNOutputLayers(nn.Module):
         num_prop_per_image = [len(p) for p in proposals]
         proposal_boxes = [p.proposal_boxes for p in proposals]
         proposal_boxes = proposal_boxes[0].cat(proposal_boxes).tensor
-        predict_boxes = apply_deltas_broadcast(
-            self.box2box_transform,
+        predict_boxes = self.box2box_transform.apply_deltas(
             proposal_deltas,
             proposal_boxes
         )
