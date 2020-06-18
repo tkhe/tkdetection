@@ -226,6 +226,9 @@ class StandardROIHeads(ROIHeads):
         train_on_pred_boxes: bool = False,
         **kwargs
     ):
+        """
+        NOTE: this interface is experimental.
+        """
         super().__init__(**kwargs)
 
         self.in_features = self.box_in_features = box_in_features

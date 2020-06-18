@@ -39,6 +39,9 @@ def build_rpn_head(cfg, input_shape):
 class StandardRPNHead(nn.Module):
     @configurable
     def __init__(self, *, in_channels: int, num_anchors: int, box_dim: int = 4):
+        """
+        NOTE: this interface is experimental.
+        """
         super().__init__()
 
         self.conv = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1)
@@ -53,11 +56,12 @@ class StandardRPNHead(nn.Module):
     def from_config(cls, cfg, input_shape):
         in_channels = [s.channels for s in input_shape]
         assert len(set(in_channels)) == 1, "Each level must have the same channel!"
+        in_channels = in_channels[0]
 
         anchor_generator = build_anchor_generator(cfg, input_shape)
         num_anchors = anchor_generator.num_anchors
         box_dim = anchor_generator.box_dim
-        assert (len(set(num_anchors) == 1)), \
+        assert (len(set(num_anchors)) == 1), \
             "Each level must have the same number of anchors per spatial position"
 
         return {"in_channels": in_channels, "num_anchors": num_anchors[0], "box_dim": box_dim}
@@ -126,7 +130,7 @@ class RPN(nn.Module):
             "nms_thresh": cfg.MODEL.RPN.NMS_THRESH,
             "batch_size_per_image": cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE,
             "positive_fraction": cfg.MODEL.RPN.POSITIVE_FRACTION,
-            "smooth_l1_beta": cfg.LOSS.SMOOTH_L1.BETA,
+            "smooth_l1_beta": cfg.LOSS.SMOOTH_L1_LOSS.BETA,
             "loss_weight": cfg.MODEL.RPN.LOSS_WEIGHT,
             "anchor_boundary_thresh": cfg.MODEL.RPN.BOUNDARY_THRESH,
             "box2box_transform": Box2BoxTransform(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS),
