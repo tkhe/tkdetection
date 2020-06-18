@@ -20,16 +20,13 @@ class Detector(nn.Module, ABC):
 
     @abstractmethod
     def forward(self, batched_inputs):
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def losses(self):
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def inference(self):
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def preprocess_inputs(self, batched_inputs):
         raise NotImplementedError

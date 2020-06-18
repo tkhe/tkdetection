@@ -58,7 +58,7 @@ def paste_masks_in_image(masks, boxes, image_shape, threshold=0.5):
     if device.type == "cpu":
         num_chunks = N
     else:
-        num_chunks = int(np.ceil(N * img_h * img_w * BYTES_PER_FLOAT / GPU_MEM_LIMIT))
+        num_chunks = int(np.ceil(N * int(img_h) * int(img_w) * BYTES_PER_FLOAT / GPU_MEM_LIMIT))
         assert num_chunks <= N, \
             "Default GPU_MEM_LIMIT in mask_ops.py is too small; try increasing it"
     chunks = torch.chunk(torch.arange(N, device=device), num_chunks)

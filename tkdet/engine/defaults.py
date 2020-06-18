@@ -34,9 +34,10 @@ from .train_loop import SimpleTrainer
 __all__ = ["default_argument_parser", "default_setup", "DefaultPredictor", "DefaultTrainer"]
 
 
-def default_argument_parser():
+def default_argument_parser(epilog=None):
     parser = argparse.ArgumentParser(
-        epilog=f"""
+        epilog=epilog
+        or f"""
 Examples:
 
 Run on single machine:

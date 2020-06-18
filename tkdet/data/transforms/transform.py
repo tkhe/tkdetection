@@ -156,16 +156,16 @@ class RotationTransform(Transform):
         self.rm_image = self.create_rotation_matrix(offset=-0.5)
 
     def apply_image(self, img, interp=None):
-        if len(img) == 0:
+        if len(img) == 0 or self.angle % 360 == 0:
             return img
         assert img.shape[:2] == (self.h, self.w)
         interp = interp if interp is not None else self.interp
         return cv2.warpAffine(img, self.rm_image, (self.bound_w, self.bound_h), flags=interp)
 
     def apply_coords(self, coords):
-        if len(coords) == 0:
-            return coords
         coords = np.asarray(coords, dtype=float)
+        if len(coords) == 0 or self.angle % 360 == 0:
+            return coords
         return cv2.transform(coords[:, np.newaxis, :], self.rm_coords)[:, 0, :]
 
     def apply_segmentation(self, segmentation):
