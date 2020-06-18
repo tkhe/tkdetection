@@ -73,8 +73,8 @@ class DatasetMapper(object):
                 dataset_dict,
                 image_shape,
                 transforms,
-                self.proposal_min_box_size,
-                self.proposal_topk,
+                proposal_topk=self.proposal_topk,
+                min_box_size=self.proposal_min_box_size,
             )
 
         if not self.is_train:

@@ -93,7 +93,7 @@ def check_image_size(dataset_dict, image):
         dataset_dict["height"] = image.shape[0]
 
 
-def transform_proposals(dataset_dict, image_shape, transforms, min_box_size, proposal_topk):
+def transform_proposals(dataset_dict, image_shape, transforms, *, proposal_topk, min_box_size=0):
     if "proposal_boxes" in dataset_dict:
         boxes = transforms.apply_box(
             BoxMode.convert(
