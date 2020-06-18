@@ -72,7 +72,7 @@ class Boxes(object):
 
         self.tensor = tensor
 
-    def clone(self):
+    def clone(self) -> "Boxes":
         return Boxes(self.tensor.clone())
 
     @torch.jit.unused
