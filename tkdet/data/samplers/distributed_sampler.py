@@ -38,7 +38,7 @@ class TrainingSampler(Sampler):
 
 
 class RepeatFactorTrainingSampler(Sampler):
-    def __init__(self, dataset_dicts, repeat_thresh, shuffle=True, seed=None):
+    def __init__(self, repeat_factors, *, shuffle=True, seed=None):
         self._shuffle = shuffle
         if seed is None:
             seed = comm.shared_random_seed()
@@ -47,11 +47,11 @@ class RepeatFactorTrainingSampler(Sampler):
         self._rank = comm.get_rank()
         self._world_size = comm.get_world_size()
 
-        rep_factors = self._get_repeat_factors(dataset_dicts, repeat_thresh)
-        self._int_part = torch.trunc(rep_factors)
-        self._frac_part = rep_factors - self._int_part
+        self._int_part = torch.trunc(repeat_factors)
+        self._frac_part = repeat_factors - self._int_part
 
-    def _get_repeat_factors(self, dataset_dicts, repeat_thresh):
+    @staticmethod
+    def repeat_factors_from_category_frequency(dataset_dicts, repeat_thresh):
         category_freq = defaultdict(int)
         for dataset_dict in dataset_dicts:
             cat_ids = {ann["category_id"] for ann in dataset_dict["annotations"]}

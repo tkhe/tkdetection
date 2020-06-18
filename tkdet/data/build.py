@@ -15,7 +15,6 @@ from tkdet.structures import BoxMode
 from tkdet.utils.comm import get_world_size
 from tkdet.utils.env import seed_all_rng
 from tkdet.utils.logger import log_first_n
-from . import samplers
 from .catalog import DatasetCatalog
 from .catalog import MetadataCatalog
 from .common import AspectRatioGroupedDataset
@@ -23,8 +22,12 @@ from .common import DatasetFromList
 from .common import MapDataset
 from .dataset_mapper import DatasetMapper
 from .detection_utils import check_metadata_consistency
+from .samplers import InferenceSampler
+from .samplers import RepeatFactorTrainingSampler
+from .samplers import TrainingSampler
 
 __all__ = [
+    "build_batch_data_loader",
     "build_detection_train_loader",
     "build_detection_test_loader",
     "get_detection_dataset_dicts",
@@ -72,7 +75,8 @@ def filter_images_with_few_keypoints(dataset_dicts, min_keypoints_per_image):
     logger = logging.getLogger(__name__)
     logger.info(
         "Removed {} images with fewer than {} keypoints.".format(
-            num_before - num_after, min_keypoints_per_image
+            num_before - num_after,
+            min_keypoints_per_image
         )
     )
     return dataset_dicts
@@ -252,12 +256,13 @@ def build_detection_train_loader(cfg, mapper=None):
     logger = logging.getLogger(__name__)
     logger.info(f"Using training sampler {sampler_name}")
     if sampler_name == "TrainingSampler":
-        sampler = samplers.TrainingSampler(len(dataset))
+        sampler = TrainingSampler(len(dataset))
     elif sampler_name == "RepeatFactorTrainingSampler":
-        sampler = samplers.RepeatFactorTrainingSampler(
+        repeat_factors = RepeatFactorTrainingSampler.repeat_factors_from_category_frequency(
             dataset_dicts,
             cfg.DATALOADER.REPEAT_THRESHOLD
         )
+        sampler = RepeatFactorTrainingSampler(repeat_factors)
     else:
         raise ValueError(f"Unknown training sampler: {sampler_name}")
 
@@ -286,7 +291,7 @@ def build_detection_test_loader(cfg, dataset_name, mapper=None):
         mapper = DatasetMapper(cfg, False)
     dataset = MapDataset(dataset, mapper)
 
-    sampler = samplers.InferenceSampler(len(dataset))
+    sampler = InferenceSampler(len(dataset))
     batch_sampler = torch.utils.data.sampler.BatchSampler(sampler, 1, drop_last=False)
 
     data_loader = torch.utils.data.DataLoader(
