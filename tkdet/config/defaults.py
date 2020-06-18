@@ -475,7 +475,7 @@ _C.LOSS.FOCAL_LOSS.GAMMA = 2
 
 _C.LOSS.SMOOTH_L1_LOSS = CN()
 
-_C.LOSS.SMOOTH_L1_LOSS.BETA = 0.11
+_C.LOSS.SMOOTH_L1_LOSS.BETA = 0.0
 
 
 # -----------------------------------------------------------------------------
