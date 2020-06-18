@@ -1,9 +1,8 @@
-import logging
-
 import numpy as np
 import torch
 import torch.nn as nn
 
+from tkdet.data.detection_utils import convert_image_to_rgb
 from tkdet.structures import ImageList
 from tkdet.models.backbone import build_backbone
 from tkdet.models.neck import build_neck
@@ -40,12 +39,8 @@ class GeneralizedRCNN(Detector):
         max_vis_prop = 20
 
         for input, prop in zip(batched_inputs, proposals):
-            img = input["image"].cpu().numpy()
-            assert img.shape[0] == 3, "Images should have 3 channels."
-
-            if self.input_format == "BGR":
-                img = img[::-1, :, :]
-            img = img.transpose(1, 2, 0)
+            img = input["image"]
+            img = convert_image_to_rgb(img.permute(1, 2, 0), self.input_format)
             v_gt = Visualizer(img, None)
             v_gt = v_gt.overlay_instances(boxes=input["instances"].gt_boxes)
             anno_img = v_gt.get_image()

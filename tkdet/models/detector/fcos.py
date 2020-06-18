@@ -138,10 +138,10 @@ class FCOS(Detector):
         locations = compute_locations(features, self.neck_strides)
 
         if self.training:
-            if "instances" in batched_inputs[0]:
-                gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
-            else:
-                gt_instances = None
+            assert "instances" in batched_inputs[0], \
+                "Instance annotations are missing in training!"
+
+            gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
             return self.losses(locations, box_cls, box_regression, centerness, gt_instances)
         else:
             results = self.inference(

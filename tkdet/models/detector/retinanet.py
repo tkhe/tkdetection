@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from tkdet.data.detection_utils import convert_image_to_rgb
 from tkdet.layers import ShapeSpec
 from tkdet.layers import batched_nms
 from tkdet.layers import cat
@@ -21,7 +22,6 @@ from tkdet.structures import ImageList
 from tkdet.structures import Instances
 from tkdet.structures import pairwise_iou
 from tkdet.utils.events import get_event_storage
-from tkdet.utils.logger import log_every_n_seconds
 from .base import Detector
 from .build import DETECTOR_REGISTRY
 
@@ -94,12 +94,8 @@ class RetinaNet(Detector):
         max_boxes = 20
 
         image_index = 0
-        img = batched_inputs[image_index]["image"].cpu().numpy()
-        assert img.shape[0] == 3, "Images should have 3 channels."
-
-        if self.input_format == "BGR":
-            img = img[::-1, :, :]
-        img = img.transpose(1, 2, 0)
+        img = batched_inputs[image_index]["image"]
+        img = convert_image_to_rgb(img.permute(1, 2, 0), self.input_format)
         v_gt = Visualizer(img, None)
         v_gt = v_gt.overlay_instances(boxes=batched_inputs[image_index]["instances"].gt_boxes)
         anno_img = v_gt.get_image()
@@ -126,10 +122,10 @@ class RetinaNet(Detector):
             anchors = self.anchor_generator(features)
 
         if self.training:
-            if "instances" in batched_inputs[0]:
-                gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
-            else:
-                gt_instances = None
+            assert "instances" in batched_inputs[0], \
+                "Instance annotations are missing in training!"
+
+            gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
 
             gt_classes, gt_anchors_reg_deltas = self.get_ground_truth(anchors, gt_instances)
             losses = self.losses(gt_classes, gt_anchors_reg_deltas, box_cls, box_delta)

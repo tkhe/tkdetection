@@ -44,6 +44,9 @@ def convert_PIL_to_numpy(image, format):
 
 
 def convert_image_to_rgb(image, format):
+    if isinstance(image, torch.Tensor):
+        image = image.cpu().numpy()
+
     if format == "BGR":
         image = image[:, :, [2, 1, 0]]
     elif format == "YUV-BT.601":
