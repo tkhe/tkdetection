@@ -34,7 +34,7 @@ class DatasetMapper(object):
             self.keypoint_hflip_indices = None
 
         if self.load_proposals:
-            self.min_box_side_len = cfg.MODEL.PROPOSAL_GENERATOR.MIN_SIZE
+            self.proposal_min_box_size = cfg.MODEL.PROPOSAL_GENERATOR.MIN_SIZE
             self.proposal_topk = (
                 cfg.DATASETS.PRECOMPUTED_PROPOSAL_TOPK_TRAIN
                 if is_train
@@ -73,8 +73,8 @@ class DatasetMapper(object):
                 dataset_dict,
                 image_shape,
                 transforms,
-                self.min_box_side_len,
-                self.proposal_topk
+                self.proposal_min_box_size,
+                self.proposal_topk,
             )
 
         if not self.is_train:

@@ -93,7 +93,7 @@ class ROIHeads(torch.nn.Module):
         *,
         num_classes,
         batch_size_per_image,
-        positive_sample_fraction,
+        positive_fraction,
         proposal_matcher,
         proposal_append_gt=True
     ):
@@ -103,7 +103,7 @@ class ROIHeads(torch.nn.Module):
         super().__init__()
 
         self.batch_size_per_image = batch_size_per_image
-        self.positive_sample_fraction = positive_sample_fraction
+        self.positive_fraction = positive_fraction
         self.num_classes = num_classes
         self.proposal_matcher = proposal_matcher
         self.proposal_append_gt = proposal_append_gt
@@ -112,7 +112,7 @@ class ROIHeads(torch.nn.Module):
     def from_config(cls, cfg):
         return {
             "batch_size_per_image": cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE,
-            "positive_sample_fraction": cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION,
+            "positive_fraction": cfg.MODEL.ROI_HEADS.POSITIVE_FRACTION,
             "num_classes": cfg.MODEL.NUM_CLASSES,
             "proposal_append_gt": cfg.MODEL.ROI_HEADS.PROPOSAL_APPEND_GT,
             "proposal_matcher": Matcher(
@@ -139,7 +139,7 @@ class ROIHeads(torch.nn.Module):
         sampled_fg_idxs, sampled_bg_idxs = subsample_labels(
             gt_classes,
             self.batch_size_per_image,
-            self.positive_sample_fraction,
+            self.positive_fraction,
             self.num_classes
         )
 

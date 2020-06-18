@@ -78,37 +78,77 @@ class RPN(nn.Module):
     Region Proposal Network, introduced by Faster R-CNN.
     """
 
-    def __init__(self, cfg, input_shape: Dict[str, ShapeSpec]):
+    @configurable
+    def __init__(
+        self,
+        *,
+        in_features: List[str],
+        head: nn.Module,
+        anchor_generator: nn.Module,
+        anchor_matcher: Matcher,
+        box2box_transform: Box2BoxTransform,
+        batch_size_per_image: int,
+        positive_fraction: float,
+        pre_nms_topk: Tuple[float, float],
+        post_nms_topk: Tuple[float, float],
+        nms_thresh: float = 0.7,
+        min_box_size: float = 0.0,
+        anchor_boundary_thresh: float = -1.0,
+        loss_weight: float = 1.0,
+        smooth_l1_beta: float = 0.0
+    ):
+        """
+        NOTE: this interface is experimental.
+        """
         super().__init__()
 
-        self.min_box_side_len = cfg.MODEL.RPN.MIN_SIZE
-        self.in_features = cfg.MODEL.RPN.IN_FEATURES
-        self.nms_thresh = cfg.MODEL.RPN.NMS_THRESH
-        self.batch_size_per_image = cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE
-        self.positive_fraction = cfg.MODEL.RPN.POSITIVE_FRACTION
-        self.loss_weight = cfg.MODEL.RPN.LOSS_WEIGHT
-        self.smooth_l1_beta = cfg.LOSS.SMOOTH_L1_LOSS.BETA
+        self.in_features = in_features
+        self.rpn_head = head
+        self.anchor_generator = anchor_generator
+        self.anchor_matcher = anchor_matcher
+        self.box2box_transform = box2box_transform
+        self.batch_size_per_image = batch_size_per_image
+        self.positive_fraction = positive_fraction
+        self.pre_nms_topk = {True: pre_nms_topk[0], False: pre_nms_topk[1]}
+        self.post_nms_topk = {True: post_nms_topk[0], False: post_nms_topk[1]}
+        self.nms_thresh = nms_thresh
+        self.min_box_size = min_box_size
+        self.anchor_boundary_thresh = anchor_boundary_thresh
+        self.loss_weight = loss_weight
+        self.smooth_l1_beta = smooth_l1_beta
 
-        self.pre_nms_topk = {
-            True: cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN,
-            False: cfg.MODEL.RPN.PRE_NMS_TOPK_TEST,
+    @classmethod
+    def from_config(cls, cfg, input_shape: Dict[str, ShapeSpec]):
+        in_features = cfg.MODEL.RPN.IN_FEATURES
+        ret = {
+            "in_features": in_features,
+            "min_box_size": cfg.MODEL.RPN.MIN_SIZE,
+            "nms_thresh": cfg.MODEL.RPN.NMS_THRESH,
+            "batch_size_per_image": cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE,
+            "positive_fraction": cfg.MODEL.RPN.POSITIVE_FRACTION,
+            "smooth_l1_beta": cfg.LOSS.SMOOTH_L1.BETA,
+            "loss_weight": cfg.MODEL.RPN.LOSS_WEIGHT,
+            "anchor_boundary_thresh": cfg.MODEL.RPN.BOUNDARY_THRESH,
+            "box2box_transform": Box2BoxTransform(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS),
         }
-        self.post_nms_topk = {
-            True: cfg.MODEL.RPN.POST_NMS_TOPK_TRAIN,
-            False: cfg.MODEL.RPN.POST_NMS_TOPK_TEST,
-        }
-        self.boundary_threshold = cfg.MODEL.RPN.BOUNDARY_THRESH
 
-        self.anchor_generator = build_anchor_generator(
-            cfg, [input_shape[f] for f in self.in_features]
+        ret["pre_nms_topk"] = (cfg.MODEL.RPN.PRE_NMS_TOPK_TRAIN, cfg.MODEL.RPN.PRE_NMS_TOPK_TEST)
+        ret["post_nms_topk"] = (
+            cfg.MODEL.RPN.POST_NMS_TOPK_TRAIN,
+            cfg.MODEL.RPN.POST_NMS_TOPK_TEST
         )
-        self.box2box_transform = Box2BoxTransform(weights=cfg.MODEL.RPN.BBOX_REG_WEIGHTS)
-        self.anchor_matcher = Matcher(
+
+        ret["anchor_generator"] = build_anchor_generator(
+            cfg,
+            [input_shape[f] for f in in_features]
+        )
+        ret["anchor_matcher"] = Matcher(
             cfg.MODEL.RPN.IOU_THRESHOLDS,
             cfg.MODEL.RPN.IOU_LABELS,
             allow_low_quality_matches=True
         )
-        self.rpn_head = build_rpn_head(cfg, [input_shape[f] for f in self.in_features])
+        ret["head"] = build_rpn_head(cfg, [input_shape[f] for f in in_features])
+        return ret
 
     def _subsample_labels(self, label):
         pos_idx, neg_idx = subsample_labels(
@@ -138,8 +178,11 @@ class RPN(nn.Module):
             gt_labels_i = gt_labels_i.to(device=gt_boxes_i.device)
             del match_quality_matrix
 
-            if self.boundary_threshold >= 0:
-                anchors_inside_image = anchors.inside_box(image_size_i, self.boundary_threshold)
+            if self.anchor_boundary_thresh >= 0:
+                anchors_inside_image = anchors.inside_box(
+                    image_size_i,
+                    self.anchor_boundary_thresh
+                )
                 gt_labels_i[~anchors_inside_image] = -1
 
             gt_labels_i = self._subsample_labels(gt_labels_i)
@@ -250,7 +293,7 @@ class RPN(nn.Module):
             self.nms_thresh,
             self.pre_nms_topk[self.training],
             self.post_nms_topk[self.training],
-            self.min_box_side_len,
+            self.min_box_size,
             self.training,
         )
 
