@@ -5,7 +5,7 @@ from typing import List
 
 from tkdet.utils.logger import log_first_n
 
-__all__ = ["DatasetCatalog", "MetadataCatalog"]
+__all__ = ["DatasetCatalog", "MetadataCatalog", "Metadata"]
 
 
 class DatasetCatalog(object):
