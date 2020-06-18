@@ -4,6 +4,7 @@ from typing import List
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from tkdet.data.detection_utils import convert_image_to_rgb
 from tkdet.layers import ShapeSpec
@@ -38,14 +39,6 @@ def permute_to_N_HWA_K(tensor, K):
     return tensor
 
 
-def permute_all_cls_and_box_to_N_HWA_K_and_concat(box_cls, box_delta, num_classes=80):
-    box_cls_flattened = [permute_to_N_HWA_K(x, num_classes) for x in box_cls]
-    box_delta_flattened = [permute_to_N_HWA_K(x, 4) for x in box_delta]
-    box_cls = cat(box_cls_flattened, dim=1).view(-1, num_classes)
-    box_delta = cat(box_delta_flattened, dim=1).view(-1, 4)
-    return box_cls, box_delta
-
-
 @DETECTOR_REGISTRY.register()
 class RetinaNet(Detector):
     """
@@ -78,7 +71,7 @@ class RetinaNet(Detector):
         self.anchor_generator = build_anchor_generator(cfg, feature_shapes)
 
         self.box2box_transform = Box2BoxTransform(weights=cfg.RETINANET.BBOX_REG_WEIGHTS)
-        self.matcher = Matcher(
+        self.anchor_matcher = Matcher(
             cfg.RETINANET.IOU_THRESHOLDS,
             cfg.RETINANET.IOU_LABELS,
             allow_low_quality_matches=True
@@ -116,10 +109,12 @@ class RetinaNet(Detector):
         features = self.backbone(images.tensor)
         features = self.neck(features)
         features = [features[f] for f in self.neck.output_shape()]
-        box_cls, box_delta = self.head(features)
 
-        with torch.no_grad():
-            anchors = self.anchor_generator(features)
+        anchors = self.anchor_generator(features)
+        pred_logits, pred_anchor_deltas = self.head(features)
+
+        pred_logits = [permute_to_N_HWA_K(x, self.num_classes) for x in pred_logits]
+        pred_anchor_deltas = [permute_to_N_HWA_K(x, 4) for x in pred_anchor_deltas]
 
         if self.training:
             assert "instances" in batched_inputs[0], \
@@ -127,18 +122,23 @@ class RetinaNet(Detector):
 
             gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
 
-            gt_classes, gt_anchors_reg_deltas = self.get_ground_truth(anchors, gt_instances)
-            losses = self.losses(gt_classes, gt_anchors_reg_deltas, box_cls, box_delta)
+            gt_labels, gt_boxes = self.label_anchors(anchors, gt_instances)
+            losses = self.losses(anchors, pred_logits, gt_labels, pred_anchor_deltas, gt_boxes)
 
             if self.vis_period > 0:
                 storage = get_event_storage()
                 if storage.iter % self.vis_period == 0:
-                    results = self.inference(box_cls, box_delta, anchors, images.image_sizes)
+                    results = self.inference(
+                        anchors,
+                        pred_logits,
+                        pred_anchor_deltas,
+                        images.image_sizes
+                    )
                     self.visualize_training(batched_inputs, results)
 
             return losses
         else:
-            results = self.inference(box_cls, box_delta, anchors, images.image_sizes)
+            results = self.inference(anchors, pred_logits, pred_anchor_deltas, images.image_sizes)
             processed_results = []
             for results_per_image, input_per_image, image_size in zip(
                 results, batched_inputs, images.image_sizes
@@ -149,93 +149,87 @@ class RetinaNet(Detector):
                 processed_results.append({"instances": r})
             return processed_results
 
-    def losses(self, gt_classes, gt_anchors_deltas, pred_class_logits, pred_anchor_deltas):
-        pred_class_logits, pred_anchor_deltas = permute_all_cls_and_box_to_N_HWA_K_and_concat(
-            pred_class_logits,
-            pred_anchor_deltas,
-            self.num_classes
-        )
+    def losses(self, anchors, pred_logits, gt_labels, pred_anchor_deltas, gt_boxes):
+        num_images = len(gt_labels)
+        gt_labels = torch.stack(gt_labels)
+        anchors = type(anchors[0]).cat(anchors).tensor
+        gt_anchor_deltas = [self.box2box_transform.get_deltas(anchors, k) for k in gt_boxes]
+        gt_anchor_deltas = torch.stack(gt_anchor_deltas)
 
-        gt_classes = gt_classes.flatten()
-        gt_anchors_deltas = gt_anchors_deltas.view(-1, 4)
+        valid_mask = gt_labels >= 0
+        pos_mask = (gt_labels >= 0) & (gt_labels != self.num_classes)
+        num_pos_anchors = pos_mask.sum().item()
+        get_event_storage().put_scalar("num_pos_anchors", num_pos_anchors / num_images)
+        self.loss_normalizer = self.loss_normalizer_momentum * self.loss_normalizer + (
+            1 - self.loss_normalizer_momentum
+        ) * max(num_pos_anchors, 1)
 
-        valid_idxs = gt_classes >= 0
-        foreground_idxs = (gt_classes >= 0) & (gt_classes != self.num_classes)
-        num_foreground = foreground_idxs.sum().item()
-        get_event_storage().put_scalar("num_foreground", num_foreground)
-        self.loss_normalizer = (
-            self.loss_normalizer_momentum * self.loss_normalizer
-            + (1 - self.loss_normalizer_momentum) * num_foreground
-        )
-
-        gt_classes_target = torch.zeros_like(pred_class_logits)
-        gt_classes_target[foreground_idxs, gt_classes[foreground_idxs]] = 1
-
+        gt_labels_target = F.one_hot(
+            gt_labels[valid_mask],
+            num_classes=self.num_classes + 1
+        )[:, :-1]
         loss_cls = sigmoid_focal_loss_jit(
-            pred_class_logits[valid_idxs],
-            gt_classes_target[valid_idxs],
+            cat(pred_logits, dim=1)[valid_mask],
+            gt_labels_target.to(pred_logits[0].dtype),
             alpha=self.focal_loss_alpha,
             gamma=self.focal_loss_gamma,
             reduction="sum",
-        ) / max(1, self.loss_normalizer)
+        )
 
         loss_box_reg = smooth_l1_loss(
-            pred_anchor_deltas[foreground_idxs],
-            gt_anchors_deltas[foreground_idxs],
+            cat(pred_anchor_deltas, dim=1)[pos_mask],
+            gt_anchor_deltas[pos_mask],
             beta=self.smooth_l1_loss_beta,
             reduction="sum",
-        ) / max(1, self.loss_normalizer)
+        )
 
-        return {"loss_cls": loss_cls, "loss_box_reg": loss_box_reg}
+        return {
+            "loss_cls": loss_cls / self.loss_normalizer,
+            "loss_box_reg": loss_box_reg / self.loss_normalizer,
+        }
 
     @torch.no_grad()
-    def get_ground_truth(self, anchors, targets):
-        gt_classes = []
-        gt_anchors_deltas = []
+    def label_anchors(self, anchors, gt_instances):
         anchors = Boxes.cat(anchors)
+        gt_labels = []
+        matched_gt_boxes = []
 
-        for targets_per_image in targets:
-            match_quality_matrix = pairwise_iou(targets_per_image.gt_boxes, anchors)
-            gt_matched_idxs, anchor_labels = self.matcher(match_quality_matrix)
+        for gt_per_image in gt_instances:
+            match_quality_matrix = pairwise_iou(gt_per_image.gt_boxes, anchors)
+            matched_idxs, anchor_labels = self.anchor_matcher(match_quality_matrix)
+            del match_quality_matrix
 
-            has_gt = len(targets_per_image) > 0
-            if has_gt:
-                matched_gt_boxes = targets_per_image.gt_boxes[gt_matched_idxs]
-                gt_anchors_reg_deltas_i = self.box2box_transform.get_deltas(
-                    anchors.tensor,
-                    matched_gt_boxes.tensor
-                )
+            if len(gt_per_image) > 0:
+                matched_gt_boxes_i = gt_per_image.gt_boxes.tensor[matched_idxs]
 
-                gt_classes_i = targets_per_image.gt_classes[gt_matched_idxs]
-                gt_classes_i[anchor_labels == 0] = self.num_classes
-                gt_classes_i[anchor_labels == -1] = -1
+                gt_labels_i = gt_per_image.gt_classes[matched_idxs]
+                gt_labels_i[anchor_labels == 0] = self.num_classes
+                gt_labels_i[anchor_labels == -1] = -1
             else:
-                gt_classes_i = torch.zeros_like(gt_matched_idxs) + self.num_classes
-                gt_anchors_reg_deltas_i = torch.zeros_like(anchors.tensor)
+                matched_gt_boxes_i = torch.zeros_like(anchors.tensor)
+                gt_labels_i = torch.zeros_like(matched_idxs) + self.num_classes
 
-            gt_classes.append(gt_classes_i)
-            gt_anchors_deltas.append(gt_anchors_reg_deltas_i)
+            gt_labels.append(gt_labels_i)
+            matched_gt_boxes.append(matched_gt_boxes_i)
 
-        return torch.stack(gt_classes), torch.stack(gt_anchors_deltas)
+        return gt_labels, matched_gt_boxes
 
-    def inference(self, box_cls, box_delta, anchors, image_sizes):
+    def inference(self, anchors, pred_logits, pred_anchor_deltas, image_sizes):
         results = []
-        box_cls = [permute_to_N_HWA_K(x, self.num_classes) for x in box_cls]
-        box_delta = [permute_to_N_HWA_K(x, 4) for x in box_delta]
 
         for img_idx, image_size in enumerate(image_sizes):
-            box_cls_per_image = [box_cls_per_level[img_idx] for box_cls_per_level in box_cls]
-            box_reg_per_image = [box_reg_per_level[img_idx] for box_reg_per_level in box_delta]
+            pred_logits_per_image = [x[img_idx] for x in pred_logits]
+            deltas_per_image = [x[img_idx] for x in pred_anchor_deltas]
             results_per_image = self.inference_single_image(
-                box_cls_per_image,
-                box_reg_per_image,
                 anchors,
+                pred_logits_per_image,
+                deltas_per_image,
                 tuple(image_size)
             )
             results.append(results_per_image)
         return results
 
-    def inference_single_image(self, box_cls, box_delta, anchors, image_size):
+    def inference_single_image(self, anchors, box_cls, box_delta, image_size):
         boxes_all = []
         scores_all = []
         class_idxs_all = []
