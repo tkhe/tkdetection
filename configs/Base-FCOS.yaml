@@ -15,7 +15,7 @@ FPN:
   IN_FEATURES: ["layer2", "layer3", "layer4"]
   TOP_BLOCK:
     NAME: "LastLevelP6P7"
-    IN_FEATURE: "layer4"
+    IN_FEATURE: "p5"
 FCOS:
   NORM_REG_TARGETS: True
   CENTERNESS_ON_REG: True
