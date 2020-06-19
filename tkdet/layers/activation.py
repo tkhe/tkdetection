@@ -88,7 +88,7 @@ class HardSigmoid(nn.Module):
         self.inplace = inplace
 
     def forward(self, x):
-        return hard_sigmoid(x, inplace)
+        return hard_sigmoid(x, self.inplace)
 
     def extra_repr(self):
         return "inplace=True" if self.inplace else ""

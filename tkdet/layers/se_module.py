@@ -31,7 +31,7 @@ class SEModule(nn.Module):
 
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.conv1 = Conv2d(in_channels, se_channels, 1, activation=activation[0])
-        self.conv2 = Conv2d(se_channels, in_channels, 1, activation=activation[1])
+        self.conv2 = Conv2d(se_channels, in_channels, 1, activation=activation[1], inplace=False)
 
     def forward(self, x):
         out = self.avg_pool(x)

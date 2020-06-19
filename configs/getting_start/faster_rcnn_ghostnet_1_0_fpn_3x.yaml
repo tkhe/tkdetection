@@ -22,7 +22,7 @@ DATASETS:
   TRAIN: ("fruits_nuts", )
   TEST: ("fruits_nuts", )
 SOLVER:
-  IMS_PER_BATCH: 2
+  IMS_PER_BATCH: 4
   BASE_LR: 0.001
   MAX_ITER: 300
   STEPS: (200, 250)

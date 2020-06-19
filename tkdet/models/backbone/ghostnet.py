@@ -57,7 +57,7 @@ class GhostModule(nn.Module):
         x1 = self.primary_conv(x)
         x2 = self.cheap_operation(x1)
         out = torch.cat([x1, x2], dim=1)
-        return out
+        return out[:, :self.out_channels, :, :,]
 
 
 class GhostBottleneck(nn.Module):
@@ -85,7 +85,7 @@ class GhostBottleneck(nn.Module):
                 mid_channels,
                 dw_kernel_size,
                 stride,
-                (dw_kernel_size - 1),
+                (dw_kernel_size - 1) // 2,
                 groups=mid_channels,
                 bias=False,
                 norm=norm
@@ -101,8 +101,9 @@ class GhostBottleneck(nn.Module):
 
         self.ghost2 = GhostModule(mid_channels, out_channels, relu=False)
 
-        self.use_res = not (in_channels == out_channels and stride == 1)
-        if self.use_res:
+        if (in_channels == out_channels and stride == 1):
+            self.shortcut = nn.Sequential()
+        else:
             self.shortcut = nn.Sequential(
                 Conv2d(
                     in_channels,
@@ -130,8 +131,7 @@ class GhostBottleneck(nn.Module):
 
         x = self.ghost2(x)
 
-        if self.use_res:
-            x += self.shortcut(residual)
+        x += self.shortcut(residual)
 
         return x
 
@@ -192,8 +192,8 @@ class GhostNet(Backbone):
 
         output_channel = make_divisible(exp_size * multiplier, 4)
         layers.append(Conv2d(input_channel, output_channel, 1, norm=norm, activation="ReLU"))
-        self._out_feature_channels[str(index + 1)] = output_channel
-        self._out_feature_strides[str(index + 1)] = stride
+        self._out_feature_channels[str(index)] = output_channel
+        self._out_feature_strides[str(index)] = stride
 
         self.features = nn.Sequential(*layers)
 
