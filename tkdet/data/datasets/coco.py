@@ -244,10 +244,11 @@ def convert_to_coco_dict(dataset_name):
                 coco_annotation["num_keypoints"] = num_keypoints
 
             if "segmentation" in annotation:
-                coco_annotation["segmentation"] = annotation["segmentation"]
-                if isinstance(coco_annotation["segmentation"], dict):
-                    coco_annotation["segmentation"]["counts"] = \
-                        coco_annotation["segmentation"]["counts"].decode("ascii")
+                seg = coco_annotation["segmentation"] = annotation["segmentation"]
+                if isinstance(seg, dict):
+                    counts = seg["counts"]
+                    if not isinstance(counts, str):
+                        seg["counts"] = counts.decode("ascii")
 
             coco_annotations.append(coco_annotation)
 
