@@ -1,6 +1,7 @@
 from .base import *
 from .darknet import *
 from .efficientnet import *
+from .ghostnet import *
 from .mobilenet import *
 from .resnet import *
 from .shufflenet import *

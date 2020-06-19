@@ -1,0 +1,33 @@
+_BASE_: "../Base-RCNN-FPN.yaml"
+MODEL:
+  META_ARCHITECTURE: "GeneralizedRCNN"
+  NUM_CLASSES: 3
+  BACKBONE:
+    NAME: "GhostNet-1.0"
+    OUT_FEATURES: ["5", "11", "17"]
+  ANCHOR:
+    SIZES: [[64], [128], [256], [512]]
+  RPN:
+    IN_FEATURES: ["p3", "p4", "p5", "p6"]
+  ROI_HEADS:
+    NAME: "StandardROIHeads"
+    IN_FEATURES: ["p3", "p4", "p5"]
+  ROI_BOX_HEAD:
+    NAME: "FastRCNNConvFCHead"
+    NUM_FC: 2
+    POOLER_RESOLUTION: 7
+FPN:
+  IN_FEATURES: ["5", "11", "17"]
+DATASETS:
+  TRAIN: ("fruits_nuts", )
+  TEST: ("fruits_nuts", )
+SOLVER:
+  IMS_PER_BATCH: 2
+  BASE_LR: 0.001
+  MAX_ITER: 300
+  STEPS: (200, 250)
+  WARMUP_ITERS: 1
+  CHECKPOINT_PERIOD: 300
+TEST:
+  EVAL_PERIOD: 300
+OUTPUT_DIR: "output/getting_start/faster_rcnn_ghostnet_1_0_fpn_3x"

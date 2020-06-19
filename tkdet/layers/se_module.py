@@ -1,6 +1,7 @@
 import torch.nn as nn
 
 from .conv2d import Conv2d
+from .misc import make_divisible
 
 __all__ = ["SEModule"]
 
@@ -11,12 +12,15 @@ class SEModule(nn.Module):
         in_channels,
         se_ratio=0.25,
         se_channels=None,
+        divisor=None,
         activation=("Swish", "Sigmoid")
     ):
         super().__init__()
 
         if se_channels is None:
             se_channels = int(in_channels * se_ratio)
+            if divisor is not None:
+                se_channels = make_divisible(se_channels, divisor)
 
         if not isinstance(activation, (tuple, list)):
             assert isinstance(activation, str)
